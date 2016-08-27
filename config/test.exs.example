@@ -1,0 +1,11 @@
+use Mix.Config
+
+config :komoku, Komoku.Storage.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  database: "komoku_ex_dev",
+  username: "komoku_ex",
+  password: "komoku_ex",
+  hostname: "localhost"
+
+
