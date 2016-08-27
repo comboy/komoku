@@ -10,7 +10,8 @@ defmodule Komoku do
     children = [
       # Starts a worker by calling: Komoku.Worker.start_link(arg1, arg2, arg3)
       # worker(Komoku.Worker, [arg1, arg2, arg3]),
-      supervisor(Komoku.Storage.Repo, [])
+      supervisor(Komoku.Storage.Repo, []),
+      supervisor(Komoku.Storage, [])
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html

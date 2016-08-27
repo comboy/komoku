@@ -4,17 +4,17 @@ defmodule Komoku.Storage.Schema.Key do
 
   schema "keys" do
     field :name, :string
-    field :key_type, :string
+    field :type, :string
+    # PONDER inserted_at? 
   end
 
   def changeset(key, params \\ %{}) do
     key
-    |> cast(params, [:name, :key_type])
-    |> validate_required([:name, :key_type])
-    |> unique_constraint(:key_type)
+    |> cast(params, [:name, :type])
+    |> validate_required([:name, :type])
+    |> unique_constraint(:name)
     # TODO validate key_type within accepted key types
     # TODO check if key name is correct
-    # TODO? rename key_type to type
   end
 
 end

@@ -1,3 +1,9 @@
+# Dev
+
+Ponderings 
+
+* use symbol instead of string to represent keytype internally?
+
 # Komoku
 
 **TODO: Add description**

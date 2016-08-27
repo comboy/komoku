@@ -5,6 +5,7 @@ defmodule Komoku.Mixfile do
     [app: :komoku,
      version: "0.1.0",
      elixir: "~> 1.3",
+     aliases: aliases,
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps()]
@@ -31,4 +32,6 @@ defmodule Komoku.Mixfile do
     [{:ecto, "~> 2.0"},
      {:postgrex, "0.11.2"}]
   end
+
+  defp aliases, do: []#["test": ["ecto.drop", "ecto.create", "ecto.migrate", "test"]]
 end
