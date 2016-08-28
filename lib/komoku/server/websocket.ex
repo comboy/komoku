@@ -21,7 +21,8 @@ defmodule Komoku.Server.Websocket do
       #IO.puts "my state: #{state |> inspect}"
       {reply, state} = case Poison.decode(content) do
         {:ok, query} ->
-          handle_query(query, state)
+          # authontication query will need separate case so that it can modify the state
+          {handle_query(query), state}
         {:error, _} ->
           {%{error: "invalid_json"}, state}
       end
@@ -36,17 +37,15 @@ defmodule Komoku.Server.Websocket do
       {:ok, req, state}
     end
 
-    def handle_query(query, state) do
-      # state modification will be needed when authentication is added
-      reply = case query do
-        %{"get" => key} ->
-          Logger.debug "GET #{key}"
-          Komoku.Storage.get(key)
-         _ ->
-           %{error: "invalid_query"}
-      end
-      {reply, state}
+    def handle_query(%{"get" => %{"key" => key}}), do: Komoku.Storage.get(key)
+    def handle_query(%{"put" => %{"key" => key, "value" => value}}) do
+      :ok = Komoku.Storage.put(key, value)
+      :ack
     end
+    def handle_query(%{"keys" => _opts}) do
+      Komoku.Storage.list_keys
+    end
+    def handle_query(_), do: :invalid_query
 
   end
 
