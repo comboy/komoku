@@ -1,7 +1,6 @@
 defmodule Komoku.StorageTest do
-  use ExUnit.Case#, async: true
+  use ExUnit.Case, async: true
 
-  alias Komoku.Storage.Repo
   alias Komoku.Storage
 
   setup do
@@ -21,6 +20,15 @@ defmodule Komoku.StorageTest do
     :ok = Storage.insert_key "num", "numeric"
     :ok = Storage.put("num", 123)
     assert Storage.get("num") == 123
+  end
+
+  test "retrieve last value" do
+    :ok = Storage.insert_key "num2", "numeric"
+    assert Storage.get("num2") == nil
+    :ok = Storage.put("num2", 123)
+    assert Storage.get("num2") == 123
+    :ok = Storage.put("num2", 345)
+    assert Storage.get("num2") == 345
   end
 
   defp has_key?(name) do

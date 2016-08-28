@@ -1,6 +1,6 @@
 defmodule Komoku.Storage do
   alias Komoku.Storage.Repo
-  alias Komoku.Storage.Schema.Key
+  #alias Komoku.Storage.Schema.Key
   alias Komoku.Storage.Schema.DataNumeric
   alias Komoku.Storage.KeyManager, as: KM
   import Ecto.Query
@@ -45,9 +45,15 @@ defmodule Komoku.Storage do
         nil
       key ->
         # TODO case by key type
-        (from p in DataNumeric, where: p.key_id == ^key.id, order_by: [desc: p.inserted_at])
-          |> Repo.one
-          |> Map.get(:value)
+        query = from p in DataNumeric,
+          where: p.key_id == ^key.id, 
+          order_by: [desc: p.inserted_at],
+          order_by: [desc: p.id],
+          limit: 1
+        case query |> Repo.one do
+          nil -> nil
+          data -> data.value
+        end
     end
   end
 
