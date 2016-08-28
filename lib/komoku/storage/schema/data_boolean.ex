@@ -1,9 +1,9 @@
-defmodule Komoku.Storage.Schema.DataNumeric do
+defmodule Komoku.Storage.Schema.DataBoolean do
   use Ecto.Schema
   import Ecto.Changeset
 
-  schema "data_numeric" do
-    field :value, :float
+  schema "data_boolean" do
+    field :value, :boolean
     field :time, Ecto.DateTime
     belongs_to :key, Komoku.Storage.Schema.Key
   end

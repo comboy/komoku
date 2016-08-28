@@ -41,6 +41,16 @@ defmodule Komoku.StorageTest do
     assert time < time_now + 0.1
   end
 
+  # Boolean
+
+  test "store a bool value" do
+    :ok = Storage.insert_key "bput", "boolean"
+    :ok = Storage.put("bput", false)
+    assert Storage.get("bput") == false
+    :ok = Storage.put("bput", true)
+    assert Storage.get("bput") == true
+  end
+
   defp has_key?(name) do
     Storage.list_keys |> Enum.any?(fn {k, _v} -> k == name end) == true
   end

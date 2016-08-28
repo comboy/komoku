@@ -3,6 +3,7 @@ defmodule Komoku.Storage do
   alias Komoku.Util
   #alias Komoku.Storage.Schema.Key
   alias Komoku.Storage.Schema.DataNumeric
+  alias Komoku.Storage.Schema.DataBoolean
   alias Komoku.Storage.KeyManager, as: KM
 
 
@@ -32,7 +33,13 @@ defmodule Komoku.Storage do
       nil ->
         {:error, :key_not_found} # TODO guess key type and insert it
       key ->
-        changeset = DataNumeric.changeset(%DataNumeric{}, %{value: value, key_id: key.id, time: Ecto.DateTime.utc(:usec)})
+        params = %{value: value, key_id: key.id, time: Ecto.DateTime.utc(:usec)}
+        changeset = case key.type do
+          "numeric" ->
+            DataNumeric.changeset(%DataNumeric{}, params)
+          "boolean" ->
+            DataBoolean.changeset(%DataBoolean{}, params)
+        end
         case Repo.insert(changeset) do
           {:ok, _dN} -> :ok
           {:error, error} -> {:error, error}
@@ -55,7 +62,11 @@ defmodule Komoku.Storage do
         nil
       key ->
         # TODO case by key type
-        query = from p in DataNumeric,
+        data_type = case key.type do
+          "numeric" -> DataNumeric
+          "boolean" -> DataBoolean
+        end
+        query = from p in data_type,
           where: p.key_id == ^key.id, 
           order_by: [desc: p.time],
           order_by: [desc: p.id],
