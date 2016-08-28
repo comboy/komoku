@@ -5,7 +5,6 @@ defmodule Komoku.Server.WebsocketTest do
   # TODO setup with socket connection
 
   test "get key value" do
-    :ok = Storage.insert_key("ws1", "numeric")
     :ok = Storage.put("ws1", 8)
     {:ok, socket} = Socket.Web.connect("127.0.0.1", 4545)
     socket |> push(%{get: %{key: "ws1"}})
@@ -13,7 +12,6 @@ defmodule Komoku.Server.WebsocketTest do
   end
 
   test "put test value" do
-    :ok = Storage.insert_key("ws2", "numeric")
     {:ok, socket} = Socket.Web.connect("127.0.0.1", 4545)
     socket |> push(%{put: %{key: "ws2", value: 7}})
     assert recv(socket) == "ack"

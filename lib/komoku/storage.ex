@@ -31,7 +31,13 @@ defmodule Komoku.Storage do
     # TODO this should be happening in the key process
     case KM.get(name) do
       nil ->
-        {:error, :key_not_found} # TODO guess key type and insert it
+        case guess_type(value) do
+          "unknown" -> 
+            {:error, :unknown_value_type} # TODO guess key type and insert it
+          type ->
+            insert_key(name, type)
+            put(name, value)
+        end
       key ->
         params = %{value: value, key_id: key.id, time: Ecto.DateTime.utc(:usec)}
         changeset = case key.type do
@@ -77,5 +83,11 @@ defmodule Komoku.Storage do
         end
     end
   end
+
+  defp guess_type(value) when is_number(value), do: "numeric"
+  defp guess_type(value) when is_boolean(value), do: "boolean"
+  defp guess_type("true"), do: "boolean"
+  defp guess_type("false"), do: "boolean"
+  defp guess_type(_), do: "unknown"
 
 end

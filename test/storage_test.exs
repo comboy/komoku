@@ -32,13 +32,26 @@ defmodule Komoku.StorageTest do
   end
 
   test "get the last value with time" do
-    :ok = Storage.insert_key "last_with_time", "numeric"
     :ok = Storage.put("last_with_time", 123)
     time_now = :os.system_time(:milli_seconds) / 1_000
     {value, time} = Storage.last("last_with_time")
     assert value == 123
     assert time > time_now - 0.1
     assert time < time_now + 0.1
+  end
+
+  test "guess numeric value type" do
+    :ok = Storage.put("guess_num", 123)
+    assert Storage.get("guess_num") == 123
+    :ok = Storage.put("guess_num2", 3.14)
+    assert Storage.get("guess_num2") == 3.14
+  end
+
+  test "guess boolean value type" do
+    :ok = Storage.put("guess_bool", false)
+    assert Storage.get("guess_bool") == false
+    :ok = Storage.put("guess_bool2", "true")
+    assert Storage.get("guess_bool2") == true
   end
 
   # Boolean
