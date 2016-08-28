@@ -4,15 +4,14 @@ defmodule Komoku.Storage.Schema.DataNumeric do
 
   schema "data_numeric" do
     field :value, :float
+    field :time, Ecto.DateTime
     belongs_to :key, Komoku.Storage.Schema.Key
-    timestamps(updated_at: false)
-    # PONDER inserted_at? 
   end
 
   def changeset(key, params \\ %{}) do
     key
-    |> cast(params, [:value, :inserted_at, :key_id])
-    |> validate_required([:value, :key_id])
+    |> cast(params, [:value, :time, :key_id])
+    |> validate_required([:time, :key_id])
   end
 
 end

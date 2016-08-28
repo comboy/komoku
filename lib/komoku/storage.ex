@@ -1,9 +1,10 @@
 defmodule Komoku.Storage do
   alias Komoku.Storage.Repo
+  alias Komoku.Util
   #alias Komoku.Storage.Schema.Key
   alias Komoku.Storage.Schema.DataNumeric
   alias Komoku.Storage.KeyManager, as: KM
-  import Ecto.Query
+
 
   def start_link do
     # TODO would love to know how to get rid of this from here,
@@ -31,7 +32,7 @@ defmodule Komoku.Storage do
       nil ->
         {:error, :key_not_found} # TODO guess key type and insert it
       key ->
-        changeset = DataNumeric.changeset(%DataNumeric{}, %{value: value, key_id: key.id})
+        changeset = DataNumeric.changeset(%DataNumeric{}, %{value: value, key_id: key.id, time: Ecto.DateTime.utc(:usec)})
         case Repo.insert(changeset) do
           {:ok, _dN} -> :ok
           {:error, error} -> {:error, error}
@@ -40,6 +41,15 @@ defmodule Komoku.Storage do
   end
 
   def get(name) do
+    case last(name) do
+      nil -> nil
+      {value, _time} -> value
+    end
+  end
+
+  def last(name) do
+    import Ecto.Query
+
     case KM.get(name) do
       nil ->
         nil
@@ -47,12 +57,12 @@ defmodule Komoku.Storage do
         # TODO case by key type
         query = from p in DataNumeric,
           where: p.key_id == ^key.id, 
-          order_by: [desc: p.inserted_at],
+          order_by: [desc: p.time],
           order_by: [desc: p.id],
           limit: 1
         case query |> Repo.one do
           nil -> nil
-          data -> data.value
+          data -> {data.value, data.time |> Util.ecto_to_ts}
         end
     end
   end
