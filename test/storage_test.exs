@@ -54,6 +54,14 @@ defmodule Komoku.StorageTest do
     assert Storage.get("guess_bool2") == true
   end
 
+  test "delete a key" do
+    :ok = Storage.put("delete_key", 123)
+    :ok = Storage.delete_key("delete_key")
+    assert Storage.get("delete_key") == nil
+    :ok = Storage.put("delete_key", "true")
+    assert Storage.get("delete_key") == true
+  end
+
   # Boolean
 
   test "store a bool value" do

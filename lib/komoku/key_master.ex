@@ -1,4 +1,4 @@
-defmodule Komoku.Storage.KeyMaster do
+defmodule Komoku.KeyMaster do
   alias Komoku.Storage.Repo
   alias Komoku.Storage.Schema.Key
 
@@ -7,6 +7,8 @@ defmodule Komoku.Storage.KeyMaster do
   def start_link, do: GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   def get(name), do: GenServer.call __MODULE__, {:get, name}
   def insert(name, type), do: GenServer.call __MODULE__, {:insert, name, type}
+  def delete(name), do: GenServer.call __MODULE__, {:delete, name}
+  def handler(name), do: GenServer.call __MODULE__, {:handler, name}
   def list, do: GenServer.call __MODULE__, :list
   # TODO update for opts
   # TODO opts returned in get and accepted in insert
@@ -31,6 +33,7 @@ defmodule Komoku.Storage.KeyMaster do
 
   # Insert a new key
   def handle_call({:insert, name, type}, _from, cache) do
+    # TODO handle case when the key is already present and type matches, should return OK
     changeset = Key.changeset(%Key{}, %{name: name |> to_string, type: type})
     case Repo.insert(changeset) do
       {:ok, key} ->
@@ -44,7 +47,25 @@ defmodule Komoku.Storage.KeyMaster do
     end
   end
 
+  # Delete a key
+  def handle_call({:delete, name}, _from, cache) do
+    case cache[name] do
+      nil -> # key is not present
+        {:reply, :ok, cache} # sure bro, I deleted it (I guess there's no need for an error)
+      %{type: _type, id: id} ->
+        # TODO remove all existing data points
+        # TODO kill kthe key handler if present
+        # TODO probably also something with subscripbtions
+        Key |> Repo.get(id) |> Repo.delete
+        {:reply, :ok, cache |> Map.delete(name)}
+    end
+  end
+
   # List all keys
   def handle_call(:list, _from, cache), do: {:reply, cache, cache}
 
+  # Return pid of the process handling given key
+  #def handle_call({:handler, name}, _from, keys) do
+    #:todo
+  #end
 end

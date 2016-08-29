@@ -4,7 +4,7 @@ defmodule Komoku.Storage do
   #alias Komoku.Storage.Schema.Key
   alias Komoku.Storage.Schema.DataNumeric
   alias Komoku.Storage.Schema.DataBoolean
-  alias Komoku.Storage.KeyMaster, as: KM
+  alias Komoku.KeyMaster, as: KM
 
 
   def start_link do
@@ -25,6 +25,8 @@ defmodule Komoku.Storage do
   end
 
   def insert_key(name, type), do: KM.insert(name, type)
+  def delete_key(name), do: KM.delete(name)
+
   def list_keys, do: KM.list
 
   def put(name, value) do
