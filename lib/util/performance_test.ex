@@ -4,7 +4,7 @@ defmodule Komoku.Util.PerformanceTest do
     num_keys = 20
     num_values = 100
     num_clients = 100
-    num_loops = 10
+    num_loops = 100
 
     # prepare data
     (1..num_keys) |> Enum.each(fn i ->
@@ -18,14 +18,22 @@ defmodule Komoku.Util.PerformanceTest do
     # run test
     (0..num_clients) |> Enum.map(fn _ ->
       Task.async(fn ->
-        {:ok, socket} = Socket.Web.connect("127.0.0.1", 4545)
+        # Test with network stack
+        # {:ok, socket} = Socket.Web.connect("127.0.0.1", 4545)
+
         shift = :rand.uniform(num_keys)
         (0..num_loops) |> Enum.each(fn _ ->
           (1..num_keys) |> Enum.each(fn i ->
             key = "test.perf_get_#{rem(i + shift, num_keys)+1}"
-            socket |> Socket.Web.send!({:text, %{get: %{key: key}} |> Poison.encode!})
-            {:text, reply} = socket |> Socket.Web.recv!
-            value = reply |> Poison.decode!
+
+            # Test without network stack:
+            value = Storage.get(key)
+
+            # Test with nework stack
+            #socket |> Socket.Web.send!({:text, %{get: %{key: key}} |> Poison.encode!})
+            #{:text, reply} = socket |> Socket.Web.recv!
+            #value = reply |> Poison.decode!
+
             true = value > 0 && value < 1001
           end)
         end)

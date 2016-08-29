@@ -65,7 +65,21 @@ defmodule Komoku.KeyMaster do
   def handle_call(:list, _from, cache), do: {:reply, cache, cache}
 
   # Return pid of the process handling given key
-  #def handle_call({:handler, name}, _from, keys) do
-    #:todo
-  #end
+  def handle_call({:handler, name}, _from, keys) do
+    case keys[name] do
+      nil -> 
+        {:reply, nil, keys}
+      %{handler: handler} ->
+        {:reply, handler, keys}
+      opts ->
+        handler = spawn_handler(name, opts)
+        {:reply, handler, keys |> Map.put(name, keys[name] |> Map.put(:handler, handler))}
+    end
+  end
+
+  defp spawn_handler(name, opts) do
+    # TODO this needs to go through supervision tree, and key handler process failure can't brink down key master
+    {:ok, pid} = Komoku.KeyHandler.start_link(name, opts)
+    pid
+  end
 end

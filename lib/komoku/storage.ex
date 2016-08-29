@@ -1,10 +1,8 @@
 defmodule Komoku.Storage do
   alias Komoku.Storage.Repo
   alias Komoku.Util
-  #alias Komoku.Storage.Schema.Key
-  alias Komoku.Storage.Schema.DataNumeric
-  alias Komoku.Storage.Schema.DataBoolean
-  alias Komoku.KeyMaster, as: KM
+  alias Komoku.KeyMaster, as: KM # TODO KM and KH look too much alike, use different aliases
+  alias Komoku.KeyHandler, as: KH
 
 
   def start_link do
@@ -27,11 +25,16 @@ defmodule Komoku.Storage do
   def insert_key(name, type), do: KM.insert(name, type)
   def delete_key(name), do: KM.delete(name)
 
-  def list_keys, do: KM.list
+  def list_keys do
+    KM.list |> Enum.map(fn {key, opts} ->
+      {key, opts |> Map.delete(:handler)}
+    end)
+    |> Enum.into(%{})
+  end
 
   def put(name, value) do
     # TODO this should be happening in the key process
-    case KM.get(name) do
+    case KM.get(name) do # TODO KM.handler instead
       nil ->
         case guess_type(value) do
           "unknown" -> 
@@ -40,18 +43,8 @@ defmodule Komoku.Storage do
             insert_key(name, type)
             put(name, value)
         end
-      key ->
-        params = %{value: value, key_id: key.id, time: Ecto.DateTime.utc(:usec)}
-        changeset = case key.type do
-          "numeric" ->
-            DataNumeric.changeset(%DataNumeric{}, params)
-          "boolean" ->
-            DataBoolean.changeset(%DataBoolean{}, params)
-        end
-        case Repo.insert(changeset) do
-          {:ok, _dN} -> :ok
-          {:error, error} -> {:error, error}
-        end
+      _key ->
+        KH.put(KM.handler(name), value, Util.ts) # TODO move reading current time to websocket so that it's more fresh
     end
   end
 
@@ -63,26 +56,9 @@ defmodule Komoku.Storage do
   end
 
   def last(name) do
-    import Ecto.Query
-
-    case KM.get(name) do
-      nil ->
-        nil
-      key ->
-        # TODO case by key type
-        data_type = case key.type do
-          "numeric" -> DataNumeric
-          "boolean" -> DataBoolean
-        end
-        query = from p in data_type,
-          where: p.key_id == ^key.id, 
-          order_by: [desc: p.time],
-          order_by: [desc: p.id],
-          limit: 1
-        case query |> Repo.one do
-          nil -> nil
-          data -> {data.value, data.time |> Util.ecto_to_ts}
-        end
+    case KM.handler(name) do
+      nil -> nil
+      pid ->  KH.last(pid)
     end
   end
 
