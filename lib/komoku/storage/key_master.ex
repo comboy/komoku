@@ -1,4 +1,4 @@
-defmodule Komoku.Storage.KeyManager do
+defmodule Komoku.Storage.KeyMaster do
   alias Komoku.Storage.Repo
   alias Komoku.Storage.Schema.Key
 
