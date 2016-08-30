@@ -3,6 +3,7 @@ defmodule Komoku.KeyHandler do
   alias Komoku.Storage.Repo
   alias Komoku.Storage.Schema.DataNumeric
   alias Komoku.Storage.Schema.DataBoolean
+  alias Komoku.Storage.Schema.DataString
   alias Komoku.Util
 
   use GenServer
@@ -48,6 +49,8 @@ defmodule Komoku.KeyHandler do
         DataNumeric.changeset(%DataNumeric{}, params)
       "boolean" ->
         DataBoolean.changeset(%DataBoolean{}, params)
+      "string" ->
+        DataString.changeset(%DataString{}, params)
     end
     ret = case Repo.insert(changeset) do
       {:ok, _dN} -> :ok
@@ -66,6 +69,7 @@ defmodule Komoku.KeyHandler do
     data_type = case key.type do
       "numeric" -> DataNumeric
       "boolean" -> DataBoolean
+      "string" -> DataString
     end
     query = from p in data_type,
       where: p.key_id == ^key.id, 

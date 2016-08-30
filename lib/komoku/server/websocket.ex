@@ -38,8 +38,8 @@ defmodule Komoku.Server.Websocket do
 
     def handle_query(%{"get" => %{"key" => key}}), do: Komoku.Storage.get(key)
 
-    def handle_query(%{"put" => %{"key" => key, "value" => value}}) do
-      :ok = Komoku.Storage.put(key, value)
+    def handle_query(%{"put" => %{"key" => key, "value" => value} = data}) do
+      :ok = Komoku.Storage.put(key, value, data["time"] || Komoku.Util.ts)
       :ack
     end
 

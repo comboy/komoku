@@ -54,6 +54,11 @@ defmodule Komoku.StorageTest do
     assert Storage.get("guess_bool2") == true
   end
 
+  test "guess string value type" do
+    :ok = Storage.put("guess_string", "foo")
+    assert Storage.get("guess_string") == "foo"
+  end
+
   test "delete a key" do
     :ok = Storage.put("delete_key", 123)
     :ok = Storage.delete_key("delete_key")
@@ -70,6 +75,14 @@ defmodule Komoku.StorageTest do
     assert Storage.get("bput") == false
     :ok = Storage.put("bput", true)
     assert Storage.get("bput") == true
+  end
+
+  # String
+
+  test "store a string value" do
+    :ok = Storage.insert_key "str_put", "string"
+    :ok = Storage.put("str_put", "boo!")
+    assert Storage.get("str_put") == "boo!"
   end
 
   defp has_key?(name) do

@@ -36,5 +36,5 @@ defmodule Komoku.Mixfile do
      {:postgrex, "0.11.2"}] # database driver
   end
 
-  defp aliases, do: []#["test": ["ecto.drop", "ecto.create", "ecto.migrate", "test"]]
+  defp aliases, do: ["test": ["ecto.create --silent", "ecto.migrate", "test"]]
 end

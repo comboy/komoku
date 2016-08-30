@@ -32,19 +32,20 @@ defmodule Komoku.Storage do
     |> Enum.into(%{})
   end
 
-  def put(name, value) do
-    # TODO this should be happening in the key process
-    case KM.get(name) do # TODO KM.handler instead
+  def put(name, value), do: put(name, value, Util.ts)
+
+  def put(name, value, time) do
+    case KM.handler(name) do
       nil ->
         case guess_type(value) do
           "unknown" -> 
-            {:error, :unknown_value_type} # TODO guess key type and insert it
+            {:error, :unknown_value_type}
           type ->
             insert_key(name, type)
             put(name, value)
         end
-      _key ->
-        KH.put(KM.handler(name), value, Util.ts) # TODO move reading current time to websocket so that it's more fresh
+      handler ->
+        handler |> KH.put(value, time)
     end
   end
 
@@ -66,6 +67,8 @@ defmodule Komoku.Storage do
   defp guess_type(value) when is_boolean(value), do: "boolean"
   defp guess_type("true"), do: "boolean"
   defp guess_type("false"), do: "boolean"
+  defp guess_type(str) when is_binary(str), do: "string"
   defp guess_type(_), do: "unknown"
 
 end
+
