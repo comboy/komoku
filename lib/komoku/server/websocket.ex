@@ -31,20 +31,27 @@ defmodule Komoku.Server.Websocket do
 
     def websocket_handle(data, _req, _state), do: IO.puts "oh we got #{data |> inspect}"
 
-    # TODO what is this
-    def websocket_info(info, req, state) do
-      IO.puts "INFO: #{info |> inspect}"
-      {:ok, req, state}
+    # updates for subscribed keys
+    def websocket_info({:key_update, change}, req, state) do
+      {:reply, {:text, %{pub: change} |> Poison.encode!}, req, state}
     end
 
     def handle_query(%{"get" => %{"key" => key}}), do: Komoku.Storage.get(key)
+
     def handle_query(%{"put" => %{"key" => key, "value" => value}}) do
       :ok = Komoku.Storage.put(key, value)
       :ack
     end
+
     def handle_query(%{"keys" => _opts}) do
       Komoku.Storage.list_keys
     end
+
+    def handle_query(%{"sub" => %{"key" => key}}) do
+      Komoku.SubscriptionManager.subscribe(key)
+      :ack
+    end
+
     def handle_query(_), do: :invalid_query
 
   end

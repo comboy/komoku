@@ -35,8 +35,10 @@ defmodule Komoku.KeyHandler do
     {:reply, value, key}
   end
 
-  def handle_call({:put, value, time}, _from, key) do
+  def handle_call({:put, value, time}, from, key) do
     value = value |> cast(key)
+    {:reply, previous, key} = handle_call(:get, from, key) # TODO not cool after all, move it some function
+    Komoku.SubscriptionManager.publish(%{key: key[:name], value: value, previous: previous, time: time}) # FIXME previous
     # TODO we probably want to put it async in some task,
     # then in case it fails one time we switch to sync
     params = %{value: value, key_id: key.id, time: time |> Util.ts_to_ecto}

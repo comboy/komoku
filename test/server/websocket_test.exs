@@ -2,29 +2,42 @@ defmodule Komoku.Server.WebsocketTest do
   use ExUnit.Case
   alias Komoku.Storage
 
-  # TODO setup with socket connection
+  setup do
+    {:ok, socket} = Socket.Web.connect("127.0.0.1", 4545)
+    {:ok, socket: socket}
+  end
 
-  test "get key value" do
+  # TODO we should be closing these connectios after each test, but I think on_exit doesn't have access to the context?
+
+  test "get key value", c do
     :ok = Storage.put("ws1", 8)
-    {:ok, socket} = Socket.Web.connect("127.0.0.1", 4545)
-    socket |> push(%{get: %{key: "ws1"}})
-    assert recv(socket) == 8
+    c[:socket] |> push(%{get: %{key: "ws1"}})
+    assert recv(c[:socket]) == 8
   end
 
-  test "put test value" do
-    {:ok, socket} = Socket.Web.connect("127.0.0.1", 4545)
-    socket |> push(%{put: %{key: "ws2", value: 7}})
-    assert recv(socket) == "ack"
-    socket |> push(%{get: %{key: "ws2"}})
-    assert recv(socket) == 7
+  test "put test value", c do
+    c[:socket] |> push(%{put: %{key: "ws2", value: 7}})
+    assert recv(c[:socket]) == "ack"
+    c[:socket] |> push(%{get: %{key: "ws2"}})
+    assert recv(c[:socket]) == 7
   end
 
-  test "list keys" do
+  test "list keys", c do
     :ok = Storage.insert_key("ws_list", "numeric")
-    {:ok, socket} = Socket.Web.connect("127.0.0.1", 4545)
-    socket |> push(%{keys: %{}})
-    assert recv(socket) |> Enum.any?(fn {key, info} -> key == "ws_list" && info["type"] == "numeric" end)
+    c[:socket] |> push(%{keys: %{}})
+    assert recv(c[:socket]) |> Enum.any?(fn {key, info} -> key == "ws_list" && info["type"] == "numeric" end)
   end
+
+  test "subscribe to key change", c do
+    :ok = Storage.insert_key("ws_key_sub", "numeric")
+    c[:socket] |> push(%{sub: %{key: "ws_key_sub"}})
+    assert recv(c[:socket]) == "ack"
+    :ok = Storage.put("ws_key_sub", 123)
+    %{"pub" => %{"key" => "ws_key_sub", "value" => 123}} = recv(c[:socket]) 
+    :ok = Storage.put("ws_key_sub", 234)
+    %{"pub" => %{"key" => "ws_key_sub", "value" => 234, "previous" => 123}} = recv(c[:socket]) 
+  end
+
 
   defp push(socket, data) do
     socket |> Socket.Web.send!({:text, data |> Poison.encode!})

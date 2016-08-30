@@ -52,10 +52,12 @@ defmodule Komoku.KeyMaster do
     case cache[name] do
       nil -> # key is not present
         {:reply, :ok, cache} # sure bro, I deleted it (I guess there's no need for an error)
-      %{type: _type, id: id} ->
-        # TODO remove all existing data points
-        # TODO kill kthe key handler if present
-        # TODO probably also something with subscripbtions
+      %{type: _type, id: id} = key ->
+        # * remove all existing data points
+        #   should be done with ecto has_many
+        # * kill handler if present
+        key[:handler] && GenServer.stop(key[:handler], :normal)
+        # * TODO probably also something with subscripbtions
         Key |> Repo.get(id) |> Repo.delete
         {:reply, :ok, cache |> Map.delete(name)}
     end
