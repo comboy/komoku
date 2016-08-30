@@ -57,7 +57,9 @@ defmodule Komoku.KeyMaster do
         #   should be done with ecto has_many
         # * kill handler if present
         key[:handler] && GenServer.stop(key[:handler], :normal)
-        # * TODO probably also something with subscripbtions
+        # * remove subscriptions
+        # PONDER: key is removed then key with the same name is added, perhaps processes that subscribed to this name changes still want to hear about them
+        # Komoku.SubscriptionManager.unsubscribe_all(name)
         Key |> Repo.get(id) |> Repo.delete
         {:reply, :ok, cache |> Map.delete(name)}
     end

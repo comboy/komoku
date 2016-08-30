@@ -48,7 +48,12 @@ defmodule Komoku.Server.Websocket do
     end
 
     def handle_query(%{"sub" => %{"key" => key}}) do
-      Komoku.SubscriptionManager.subscribe(key)
+      :ok = Komoku.SubscriptionManager.subscribe(key)
+      :ack
+    end
+
+    def handle_query(%{"unsub" => %{"key" => key}}) do
+      :ok = Komoku.SubscriptionManager.unsubscribe(key)
       :ack
     end
 

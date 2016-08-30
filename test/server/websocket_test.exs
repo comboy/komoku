@@ -38,6 +38,16 @@ defmodule Komoku.Server.WebsocketTest do
     %{"pub" => %{"key" => "ws_key_sub", "value" => 234, "previous" => 123}} = recv(c[:socket]) 
   end
 
+  test "unsubscribe from key change", c do
+    :ok = Storage.insert_key("ws_key_sub2", "numeric")
+    c[:socket] |> push(%{sub: %{key: "ws_key_sub2"}})
+    assert recv(c[:socket]) == "ack"
+    c[:socket] |> push(%{unsub: %{key: "ws_key_sub2"}})
+    :ok = Storage.put("ws_key_sub2", 123)
+    c[:socket] |> push(%{put: %{key: "ws_key_sub2", value: 1}})
+    assert recv(c[:socket]) == "ack" # if subscription was stil lon first received msg would be a notification
+  end
+
 
   defp push(socket, data) do
     socket |> Socket.Web.send!({:text, data |> Poison.encode!})
