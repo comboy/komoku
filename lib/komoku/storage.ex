@@ -22,7 +22,7 @@ defmodule Komoku.Storage do
     Supervisor.start_link(children, opts)
   end
 
-  def insert_key(name, type), do: KM.insert(name, type)
+  def insert_key(name, type, opts \\ %{}), do: KM.insert(name, type, opts)
   def delete_key(name), do: KM.delete(name)
 
   def list_keys do

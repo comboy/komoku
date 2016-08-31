@@ -2,7 +2,7 @@ defmodule Komoku.Util do
   @epoch :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
 
   def ecto_to_ts(datetime) do
-   datetime 
+   datetime
      |> Ecto.DateTime.to_erl
      |> :calendar.datetime_to_gregorian_seconds
      |> Kernel.-(@epoch)
@@ -10,12 +10,14 @@ defmodule Komoku.Util do
   end
 
   def ts_to_ecto(ts) do
-    {:ok, datetime} =  ts 
+    ts = ts / 1 # int or float to float
+    {:ok, datetime} = ts
+    |> Float.floor
     |> round
     |> Kernel.+(@epoch)
     |> :calendar.gregorian_seconds_to_datetime
     |> Ecto.DateTime.cast
-    usec = ((ts - Float.floor(ts / 1)) * 1_000_000) |> round # division by one to cast int to float in case it's int
+    usec = ((ts - Float.floor(ts / 1)) * 1_000_000) |> round
     %{datetime | usec: usec}
   end
 

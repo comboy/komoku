@@ -5,6 +5,7 @@ defmodule Komoku.Storage.Repo.Migrations.CreateKeys do
     create table(:keys) do
       add :name, :string
       add :type, :string
+      add :opts, :map
     end
 
     create unique_index(:keys, [:name])

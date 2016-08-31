@@ -18,27 +18,76 @@ defmodule Komoku.KeyHandler do
 
   # Implementation
 
-  def init(key), do: {:ok, key}
-  # get with last value cached
-  def handle_call(:last, _from, %{last: last} = key), do: {:reply, last, key}
-  # get when we don't yet have the cache
-  def handle_call(:last, _from, key) do
-    last = get_last_from_db(key)
-    {:reply, last, key |> Map.put(:last, last)}
+  def init(%{type: "uptime"} = key) do
+    send(self, :uptime_init)
+    {:ok, key}
   end
 
-  def handle_call(:get, from, key) do
-    {:reply, last, key} = handle_call(:last, from, key) # is it cool to call another handle_call? ¯\_(ツ)_/¯
+  def init(key), do: {:ok, key}
+
+  def handle_info(:uptime_init, key) do
+    key = key |> Map.put(:last, get_last_from_db(key))
+    key = case key[:last] do
+      # If uptim key in the database has true value then update it to false or shedule a msg that will do that
+      {true, time} ->
+        dt = Komoku.Util.ts - time
+        if dt > key.opts["max_time"] do
+          {:ok, key} = put_value(true, Komoku.Util.ts, key)
+          key
+        else
+          Process.send_after(self, {:uptime_timeout, time}, ((key.opts["max_time"] - dt) * 1000) |> round)
+          key
+        end
+      _ -> key
+    end
+    {:noreply, key}
+  end
+
+  def handle_call(:last, _from, key) do
+    {last, key} = key |> get_last
+    {:reply, last, key}
+  end
+
+  def handle_call(:get, _from, key) do
+    {value, key} = key |> get_value
+    {:reply, value, key}
+  end
+
+  def handle_call({:put, value, time}, _from, key) do
+    {ret, key} = put_value(value, time, key)
+    {:reply, ret, key}
+  end
+
+  def handle_info({:uptime_timeout, time}, %{last: {_value, last_time}} = key) do
+    cond do
+      last_time == time ->
+        {:ok, key} = put_value(false, Komoku.Util.ts, key)
+        {:noreply, key}
+      true ->
+        {:noreply, key}
+    end
+  end
+
+  # last value cached
+  defp get_last(%{last: last} = key), do: {last, key}
+  # when we don't yet have the cache for last value
+  defp get_last(key) do
+    last = get_last_from_db(key)
+    {last, key |> Map.put(:last, last)}
+  end
+
+  defp get_value(key) do
+    {last, key} = key |> get_last
     value = case last do
       nil -> nil
       {value, _time} -> value
     end
-    {:reply, value, key}
+    {value, key}
   end
 
-  def handle_call({:put, value, time}, from, key) do
+  defp put_value(value, time, key) do
     value = value |> cast(key)
-    {:reply, previous, key} = handle_call(:get, from, key) # TODO not cool after all, move it some function
+    {previous, key} = key |> get_value
     Komoku.SubscriptionManager.publish(%{key: key[:name], value: value, previous: previous, time: time}) # FIXME previous
     # TODO we probably want to put it async in some task,
     # then in case it fails one time we switch to sync
@@ -51,13 +100,26 @@ defmodule Komoku.KeyHandler do
         DataBoolean.changeset(%DataBoolean{}, params)
       "string" ->
         DataString.changeset(%DataString{}, params)
+      "uptime" ->
+        DataBoolean.changeset(%DataBoolean{}, params)
     end
     ret = case Repo.insert(changeset) do
       {:ok, _dN} -> :ok
       {:error, error} -> {:error, error}
     end
-    {:reply, ret, key |> update_last({value, time})}
+    key = key |> update_last({value, time}) |> key_updated
+    {ret, key}
   end
+
+
+  # When uptime key is set to true we need to setup msg to switch it back to false later
+  def key_updated(%{type: "uptime", last: {true, time}, opts: %{"max_time" => max_time}} = key) do
+    Process.send_after(self, {:uptime_timeout, time}, (max_time * 1000) |> round)
+    key
+  end
+
+  def key_updated(key), do: key
+
 
   # We only want to update last if it doesn't have the highest time anymore
   defp update_last(key, {value, time}) do
@@ -84,6 +146,7 @@ defmodule Komoku.KeyHandler do
       "numeric" -> DataNumeric
       "boolean" -> DataBoolean
       "string" -> DataString
+      "uptime" -> DataBoolean
     end
     query = from p in data_type,
       where: p.key_id == ^key.id, 
