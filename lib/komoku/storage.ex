@@ -42,7 +42,7 @@ defmodule Komoku.Storage do
             {:error, :unknown_value_type}
           type ->
             insert_key(name, type)
-            put(name, value)
+            put(name, value, time)
         end
       handler ->
         handler |> KH.put(value, time)

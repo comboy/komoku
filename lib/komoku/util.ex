@@ -15,7 +15,7 @@ defmodule Komoku.Util do
     |> Kernel.+(@epoch)
     |> :calendar.gregorian_seconds_to_datetime
     |> Ecto.DateTime.cast
-    usec = ((ts - Float.floor(ts)) * 1_000_000) |> round
+    usec = ((ts - Float.floor(ts / 1)) * 1_000_000) |> round # division by one to cast int to float in case it's int
     %{datetime | usec: usec}
   end
 

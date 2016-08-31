@@ -56,7 +56,21 @@ defmodule Komoku.KeyHandler do
       {:ok, _dN} -> :ok
       {:error, error} -> {:error, error}
     end
-    {:reply, ret, key |> Map.put(:last, {value, time})}
+    {:reply, ret, key |> update_last({value, time})}
+  end
+
+  # We only want to update last if it doesn't have the highest time anymore
+  defp update_last(key, {value, time}) do
+    case key[:last] do
+      nil -> 
+        key |> Map.put(:last, {value, time})
+      {_prev_value, prev_time} ->
+        if prev_time > time do
+          key
+        else
+          key |> Map.put(:last, {value, time})
+        end
+    end
   end
 
   defp cast("true", %{type: "boolean"}), do: true

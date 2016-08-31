@@ -67,6 +67,24 @@ defmodule Komoku.StorageTest do
     assert Storage.get("delete_key") == true
   end
 
+  # Time 
+
+  test "should store provided time properly" do
+    ts = 1472600000
+    :ok = Storage.put("store_time", 123, ts)
+    {123, time} = Storage.last("store_time")
+    assert time == ts
+  end
+
+  test "last value should be ordered by time not storage time" do
+    ts1 = 14726_00000
+    :ok = Storage.put("store_time2", 123, ts1)
+    ts2 = 14720_00000
+    :ok = Storage.put("store_time2", 123, ts2)
+    {123, time} = Storage.last("store_time2")
+    assert time == ts1
+  end
+
   # Boolean
 
   test "store a bool value" do
