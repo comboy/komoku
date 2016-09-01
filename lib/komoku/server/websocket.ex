@@ -57,17 +57,25 @@ defmodule Komoku.Server.Websocket do
       :ack
     end
 
-    #def handle_query(%{"define" => defs}) do
-      ## PONDER not sure it's worth doing the status, we need to handle exceptions anyway somehew
-      #{status, valid_defs} = defs |> Enum.reduce(:ok, fn({key, params}, status) ->
-        #case params do
-          #%{"type" => key_type} ->
-          #_
-            #{:invalid, nil}
-        #end
-      #end)
-
-    #end
+    def handle_query(%{"define" => defs}) do
+      # PONDER not sure it's worth doing the status, we need to handle exceptions anyway somehew
+      # NEWAPI we probably want to provide hash of results for each key definition?
+      status = defs |> Enum.reduce(:ok, fn({name, params}, status) ->
+        case params do
+          %{"type" => type} ->
+            case Komoku.Storage.update_key(name, type, params["opts"] || %{}) do
+              :ok -> status
+              _   -> :error_creating_key
+            end
+          _ ->
+            :type_not_provided
+        end
+      end)
+      case status do
+        :ok -> :ack
+        err -> {:error, err}
+      end
+    end
 
     def handle_query(_), do: :invalid_query
 

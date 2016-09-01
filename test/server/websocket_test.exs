@@ -28,6 +28,17 @@ defmodule Komoku.Server.WebsocketTest do
     assert recv(c[:socket]) |> Enum.any?(fn {key, info} -> key == "ws_list" && info["type"] == "numeric" end)
   end
 
+  test "define keys", c do
+    c[:socket] |> push(%{define: %{deftest: %{type: "numeric"}}})
+    assert recv(c[:socket]) == "ack"
+    assert Storage.list_keys["deftest"].type == "numeric"
+
+    c[:socket] |> push(%{define: %{deftest2: %{type: "uptime", opts: %{max_time: 7}}}})
+    assert recv(c[:socket]) == "ack"
+    assert Storage.list_keys["deftest2"].type == "uptime"
+    assert Storage.list_keys["deftest2"].opts["max_time"] == 7
+  end
+
   test "subscribe to key change", c do
     :ok = Storage.insert_key("ws_key_sub", "numeric")
     c[:socket] |> push(%{sub: %{key: "ws_key_sub"}})
