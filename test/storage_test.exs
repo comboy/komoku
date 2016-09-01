@@ -12,11 +12,44 @@ defmodule Komoku.StorageTest do
     :ok
   end
 
+  # Keys operations
+
   test "create a key" do
     assert has_key?("boo") == false
     :ok = Storage.insert_key "boo", "numeric"
     assert has_key?("boo") == true
   end
+
+  test "delete a key" do
+    :ok = Storage.put("delete_key", 123)
+    :ok = Storage.delete_key("delete_key")
+    assert Storage.get("delete_key") == nil
+    :ok = Storage.put("delete_key", "true")
+    assert Storage.get("delete_key") == true
+  end
+
+  test "update a key when doesn't exist" do
+    :ok = Storage.update_key "boo_update", "numeric"
+    assert has_key?("boo_update", "numeric") == true
+  end
+
+  test "update opts for an existing key" do
+    name = "update_uptime_opts"
+    :ok = Storage.insert_key(name, "uptime", %{"max_time" => 60})
+    assert has_key?(name, "uptime") == true
+    assert Storage.list_keys[name].opts == %{"max_time" => 60}
+    :ok = Storage.update_key(name, "uptime", %{"max_time" => 77})
+    assert has_key?(name, "uptime") == true
+    assert Storage.list_keys[name].opts == %{"max_time" => 77}
+  end
+
+  test "try updating key with wrong type" do
+    name = "update_wrong_type"
+    :ok = Storage.insert_key(name, "numeric")
+    {:error, :type_mismatch} = Storage.update_key(name, "boolean")
+  end
+
+  # Storing values
 
   test "store a value" do
     :ok = Storage.insert_key "num", "numeric"
@@ -59,14 +92,6 @@ defmodule Komoku.StorageTest do
   test "guess string value type" do
     :ok = Storage.put("guess_string", "foo")
     assert Storage.get("guess_string") == "foo"
-  end
-
-  test "delete a key" do
-    :ok = Storage.put("delete_key", 123)
-    :ok = Storage.delete_key("delete_key")
-    assert Storage.get("delete_key") == nil
-    :ok = Storage.put("delete_key", "true")
-    assert Storage.get("delete_key") == true
   end
 
   test "try to insert invalid key type" do
@@ -151,9 +176,11 @@ defmodule Komoku.StorageTest do
     assert Storage.get("uptime_change3") == false
   end
 
-  # TODO how to test reading uptime after initialization from db
-
   defp has_key?(name) do
     Storage.list_keys |> Enum.any?(fn {k, _v} -> k == name end) == true
+  end
+
+  defp has_key?(name, type) do
+    Storage.list_keys |> Enum.any?(fn {k, %{type: type_}} -> k == name && type_ == type end) == true
   end
 end

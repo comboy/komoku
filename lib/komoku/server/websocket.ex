@@ -57,6 +57,18 @@ defmodule Komoku.Server.Websocket do
       :ack
     end
 
+    #def handle_query(%{"define" => defs}) do
+      ## PONDER not sure it's worth doing the status, we need to handle exceptions anyway somehew
+      #{status, valid_defs} = defs |> Enum.reduce(:ok, fn({key, params}, status) ->
+        #case params do
+          #%{"type" => key_type} ->
+          #_
+            #{:invalid, nil}
+        #end
+      #end)
+
+    #end
+
     def handle_query(_), do: :invalid_query
 
   end

@@ -7,6 +7,7 @@ defmodule Komoku.KeyMaster do
   def start_link, do: GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   def get(name), do: GenServer.call __MODULE__, {:get, name}
   def insert(name, type, opts \\ %{}), do: GenServer.call __MODULE__, {:insert, name, type, opts}
+  def update(name, type, opts \\ %{}), do: GenServer.call __MODULE__, {:update, name, type, opts}
   def delete(name), do: GenServer.call __MODULE__, {:delete, name}
   def handler(name), do: GenServer.call __MODULE__, {:handler, name}
   def list, do: GenServer.call __MODULE__, :list
@@ -35,21 +36,45 @@ defmodule Komoku.KeyMaster do
 
   # Fetch key
   # PONDER {:ok, key} and :not_found instead of nil?
-  def handle_call({:get, name}, _from, cache), do: {:reply, cache[name], cache}
+  def handle_call({:get, name}, _from, keys), do: {:reply, keys[name], keys}
 
   # Insert a new key
-  def handle_call({:insert, name, type, opts}, _from, cache) do
+  def handle_call({:insert, name, type, opts}, _from, keys) do
     # TODO handle case when the key is already present and type matches, should return OK
     changeset = Key.changeset(%Key{}, %{name: name |> to_string, type: type, opts: opts})
     case Repo.insert(changeset) do
       {:ok, key} ->
-        {:reply, :ok, cache |> Map.put(name, %{type: key.type, id: key.id, opts: opts} |> prepare_opts) }
+        {:reply, :ok, keys |> Map.put(name, %{type: key.type, id: key.id, opts: opts} |> prepare_opts) }
       {:error, error} ->
         # TODO abstact error messages away from ecto. We probably want
         # * {:error, :invalid_key_name}
         # * {:error, :already_exists}
         # * {:error, :invalid opts} later?
-        {:reply, {:error, error}, cache}
+        {:reply, {:error, error}, keys}
+    end
+  end
+
+  def handle_call({:update, name, type, opts}, from, keys) do
+    case keys[name] do
+      nil ->
+        # Key does'nt exist, just insert it
+        handle_call({:insert, name, type, opts}, from, keys)
+      %{type: ^type} = key ->
+        # Type is fine, we just need to update the opts
+        # TODO opts validation, not sure if it belongs in Schema.Key changeset or somewhere in KM
+        # TODO remove opts that match defaults not to store them in db
+        dbkey = Repo.get!(Key, key.id) # TODO we shouldn't need to do this select first
+        dbkey = dbkey |> Ecto.Changeset.change(opts: key.opts |> Map.merge(opts))
+        case Repo.update(dbkey) do
+          {:ok, key_} ->
+            {:reply, :ok, keys |> Map.put(name, key |> Map.put(:opts, key_.opts))}
+          {:error, error} ->
+            # TODO abstract away ecto errors, see :insert
+            {:reply, {:error, error}, keys}
+        end
+      _ ->
+        # Cannot modify key type
+        {:reply, {:error, :type_mismatch}, keys}
     end
   end
 

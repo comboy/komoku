@@ -23,6 +23,9 @@ defmodule Komoku.Storage do
   end
 
   def insert_key(name, type, opts \\ %{}), do: KM.insert(name, type, opts)
+
+  def update_key(name, type, opts \\ %{}), do: KM.update(name, type, opts)
+
   def delete_key(name), do: KM.delete(name)
 
   def list_keys do
@@ -38,7 +41,7 @@ defmodule Komoku.Storage do
     case KM.handler(name) do
       nil ->
         case guess_type(value) do
-          "unknown" -> 
+          "unknown" ->
             {:error, :unknown_value_type}
           type ->
             insert_key(name, type)
