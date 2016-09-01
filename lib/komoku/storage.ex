@@ -22,8 +22,16 @@ defmodule Komoku.Storage do
     Supervisor.start_link(children, opts)
   end
 
+  # TODO find a good place to put doc about types and opts (some opts are common)
+  #
+  # Add a new key. TODO proper docs, here are available opts to have them in one place:
+  # * same_value_resolution - update to key with same value won't be stored in db until time difference is greater than this value [seconds, can be float]
+  # * min_resolution - if multiple values will be pushed within that time, only one value will be stored in db [seconds, can be float] - we probably want e.g. averaging for numeric
+  #
+  # type specific:
+  # * uptime
+  # ** max_time - time after which value automatically goes to false [seconds, can be float]
   def insert_key(name, type, opts \\ %{}), do: KM.insert(name, type, opts)
-
   def update_key(name, type, opts \\ %{}), do: KM.update(name, type, opts)
 
   def delete_key(name), do: KM.delete(name)

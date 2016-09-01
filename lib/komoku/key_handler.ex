@@ -43,6 +43,16 @@ defmodule Komoku.KeyHandler do
     {:noreply, key}
   end
 
+  def handle_info({:uptime_timeout, time}, %{last: {_value, last_time}} = key) do
+    cond do
+      last_time == time ->
+        {:ok, key} = put_value(false, Komoku.Util.ts, key)
+        {:noreply, key}
+      true ->
+        {:noreply, key}
+    end
+  end
+
   def handle_call(:last, _from, key) do
     {last, key} = key |> get_last
     {:reply, last, key}
@@ -56,16 +66,6 @@ defmodule Komoku.KeyHandler do
   def handle_call({:put, value, time}, _from, key) do
     {ret, key} = put_value(value, time, key)
     {:reply, ret, key}
-  end
-
-  def handle_info({:uptime_timeout, time}, %{last: {_value, last_time}} = key) do
-    cond do
-      last_time == time ->
-        {:ok, key} = put_value(false, Komoku.Util.ts, key)
-        {:noreply, key}
-      true ->
-        {:noreply, key}
-    end
   end
 
   # last value cached
@@ -87,10 +87,31 @@ defmodule Komoku.KeyHandler do
 
   defp put_value(value, time, key) do
     value = value |> cast(key)
-    {previous, key} = key |> get_value
-    Komoku.SubscriptionManager.publish(%{key: key[:name], value: value, previous: previous, time: time}) # FIXME previous
-    # TODO we probably want to put it async in some task,
-    # then in case it fails one time we switch to sync
+    {{pvalue, ptime}, key} = case key |> get_last do
+      {nil, key} -> {{nil, nil}, key}
+      ok -> ok
+    end
+
+    Komoku.SubscriptionManager.publish(%{key: key[:name], value: value, previous: pvalue, time: time})
+
+    ret = cond do
+      key.opts[:same_value_resolution] && ptime && pvalue == value && (time - ptime) < key.opts[:same_value_resolution] ->
+        :ok
+      key.opts[:min_resolution] && ptime && (time - ptime) < key.opts[:min_resolution] ->
+        :ok
+      true ->
+        # TODO we probably want to put it async in some task,
+        # then in case it fails one time we switch to sync
+        case store_value(key, value, time) do
+          {:ok, _dN} -> :ok
+          {:error, error} -> {:error, error}
+        end
+    end
+    key = key |> update_last({value, time}) |> key_updated
+    {ret, key}
+  end
+
+  defp store_value(key, value, time) do
     params = %{value: value, key_id: key.id, time: time |> Util.ts_to_ecto}
     # TODO key.type to module time helper in some place to DRY
     changeset = case key.type do
@@ -103,12 +124,7 @@ defmodule Komoku.KeyHandler do
       "uptime" ->
         DataBoolean.changeset(%DataBoolean{}, params)
     end
-    ret = case Repo.insert(changeset) do
-      {:ok, _dN} -> :ok
-      {:error, error} -> {:error, error}
-    end
-    key = key |> update_last({value, time}) |> key_updated
-    {ret, key}
+    Repo.insert(changeset)
   end
 
 
@@ -124,7 +140,7 @@ defmodule Komoku.KeyHandler do
   # We only want to update last if it doesn't have the highest time anymore
   defp update_last(key, {value, time}) do
     case key[:last] do
-      nil -> 
+      nil ->
         key |> Map.put(:last, {value, time})
       {_prev_value, prev_time} ->
         if prev_time > time do

@@ -120,6 +120,13 @@ defmodule Komoku.KeyMaster do
 
   defp prepare_opts(params), do: params |> Map.put(:opts, default_opts(params) |> Map.merge(params[:opts] || %{}))
 
-  defp default_opts(%{type: "uptime"} = _opts), do: %{"max_time" => 60}
-  defp default_opts(_params), do: %{}
+  defp default_opts(%{type: "uptime"} = _opts), do: base_default_opts |> Map.merge(%{"max_time" => 60})
+  defp default_opts(_params), do: base_default_opts
+
+  defp base_default_opts do
+    %{
+      same_value_resolution: 60,
+      min_resolution: 1
+    }
+  end
 end

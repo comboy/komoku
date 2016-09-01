@@ -37,10 +37,10 @@ defmodule Komoku.StorageTest do
     name = "update_uptime_opts"
     :ok = Storage.insert_key(name, "uptime", %{"max_time" => 60})
     assert has_key?(name, "uptime") == true
-    assert Storage.list_keys[name].opts == %{"max_time" => 60}
+    assert Storage.list_keys[name].opts["max_time"] == 60
     :ok = Storage.update_key(name, "uptime", %{"max_time" => 77})
     assert has_key?(name, "uptime") == true
-    assert Storage.list_keys[name].opts == %{"max_time" => 77}
+    assert Storage.list_keys[name].opts["max_time"] == 77
   end
 
   test "try updating key with wrong type" do
@@ -175,6 +175,8 @@ defmodule Komoku.StorageTest do
     100 |> :timer.sleep
     assert Storage.get("uptime_change3") == false
   end
+
+  # TODO test for same_value_resultion and min_resolution, we need to have access to number of stored data points for that
 
   defp has_key?(name) do
     Storage.list_keys |> Enum.any?(fn {k, _v} -> k == name end) == true
