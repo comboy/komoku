@@ -15,10 +15,6 @@ defmodule Komoku.Server.Websocket do
     def websocket_terminate(_reason, _req, _state), do: :ok
 
     def websocket_handle({:text, content}, req, state) do
-      Logger.debug "< #{content}"
-      #IO.puts "GOT msg #{content |> inspect}"
-      #IO.puts "I AM #{self |> inspect}"
-      #IO.puts "my state: #{state |> inspect}"
       {reply, state} = case Poison.decode(content) do
         {:ok, query} ->
           # authontication query will need separate case so that it can modify the state
@@ -89,8 +85,23 @@ defmodule Komoku.Server.Websocket do
       }
     ])
 
-    # TODO:what is 100, keywords instead of tuples, check if there's a simpler dispatch
-    :cowboy.start_http(:http, 100, [{:port, 4545}], [{:env, [{:dispatch, dispatch}]}])
+    ws_config = Application.fetch_env!(:komoku, :websocket_server)
+
+    port = ws_config[:port]
+    ssl = ws_config[:ssl]
+
+    case ssl do
+      true ->
+        :cowboy.start_https(:http, 100, [
+          port: port,
+          certfile: ws_config[:cert_file],
+          keyfile: ws_config[:key_file],
+        ], [
+          env: [dispatch: dispatch]
+        ])
+      _ ->
+        :cowboy.start_http(:http, 100, [port: port], [env: [dispatch: dispatch]])
+    end
   end
 
 
