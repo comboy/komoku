@@ -11,14 +11,15 @@ defmodule Komoku.KeyMaster do
   def delete(name), do: GenServer.call __MODULE__, {:delete, name}
   def handler(name), do: GenServer.call __MODULE__, {:handler, name}
   def list, do: GenServer.call __MODULE__, :list
-  # TODO update for opts
-  # TODO opts returned in get and accepted in insert
 
-  # impl
+  # Implementation
 
   def init(_) do
+    send(self, :do_init) # Do init in your own process to make system boot  quicker
+    {:ok, nil}
+  end
 
-    # TODO do the trick with sending myself a cast to avoid lagging init while loading all the keys
+  def handle_info(:do_init, _) do
     keys = Key
       |> Repo.all
       |> Enum.map(fn %Key{type: type, name: name, id: id, opts: opts} ->
@@ -31,7 +32,7 @@ defmodule Komoku.KeyMaster do
         end
       end)
       |> Enum.into(%{})
-    {:ok, keys}
+    {:noreply, keys}
   end
 
   # Fetch key

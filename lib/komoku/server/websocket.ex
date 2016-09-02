@@ -78,7 +78,6 @@ defmodule Komoku.Server.Websocket do
   end
 
   def start_link do
-    # TODO we need ssl, cert files should be an option in config.exis
     dispatch = :cowboy_router.compile([
       { :_, # all hostnames
         [{"/", Handler, []}]
