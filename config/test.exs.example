@@ -8,6 +8,6 @@ config :komoku, Komoku.Storage.Repo,
   password: "komoku_ex",
   hostname: "localhost"
 
-config :logger, level: :info
+config :logger, level: :warn
 
 

@@ -5,12 +5,17 @@ use Mix.Config
 config :komoku,
   ecto_repos: [Komoku.Storage.Repo]
 
-config :komoku, :websocket_server,
-  port: 4545
-  #ssl: true,
-  #cert_file: "config/cert.pem",
-  #key_file: "config/key.pem"
-
+config :komoku, :servers, [
+  websocket: [
+    port: 7272
+  ],
+  websocket: [
+    port: 7273,
+    ssl: true,
+    cert_file: "config/cert.pem",
+    key_file: "config/key.pem"
+  ]
+]
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
 # file won't be loaded nor affect the parent project. For this reason,

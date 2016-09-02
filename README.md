@@ -67,6 +67,7 @@ HA: log, what's the alarm state (armed, disabled, waiting), selected radio stati
 
 ### Low priority features
 
-* protobuf + tcp as an alternative to websocket
+* protobuf + tcp server
+* http server
 * komowku-web with graphs
 * string opt to only allow specified set of values (careful with `update_key` and historical values that may not comply)

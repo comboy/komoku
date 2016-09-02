@@ -1,8 +1,9 @@
 defmodule Komoku.Server.Websocket do
 
   defmodule Handler do
-    @behaviour :cowboy_websocket_handler
     require Logger
+
+    @behaviour :cowboy_websocket_handler
 
     def init({_tcp, _http}, _req, _opts) do
       {:upgrade, :protocol, :cowboy_websocket}
@@ -15,6 +16,7 @@ defmodule Komoku.Server.Websocket do
     def websocket_terminate(_reason, _req, _state), do: :ok
 
     def websocket_handle({:text, content}, req, state) do
+      Logger.debug "#{self |> inspect} > #{content}"
       {reply, state} = case Poison.decode(content) do
         {:ok, query} ->
           # authontication query will need separate case so that it can modify the state
@@ -22,7 +24,9 @@ defmodule Komoku.Server.Websocket do
         {:error, _} ->
           {%{error: "invalid_json"}, state}
       end
-      {:reply, {:text, reply |> Poison.encode!}, req, state}
+      reply_text = reply |> Poison.encode!
+      Logger.debug "#{self |> inspect} < #{reply_text}"
+      {:reply, {:text, reply_text}, req, state}
     end
 
     def websocket_handle(data, _req, _state), do: IO.puts "oh we got #{data |> inspect}"
@@ -77,29 +81,34 @@ defmodule Komoku.Server.Websocket do
 
   end
 
-  def start_link do
+  require Logger
+
+  def init(config) do
+    start_link(config)
+  end
+
+  def start_link(config) do
     dispatch = :cowboy_router.compile([
       { :_, # all hostnames
         [{"/", Handler, []}]
       }
     ])
 
-    ws_config = Application.fetch_env!(:komoku, :websocket_server)
+    port = config[:port]
 
-    port = ws_config[:port]
-    ssl = ws_config[:ssl]
+    Logger.info "Starting websocket server on port #{port} [ssl=#{!!config[:ssl]}]"
 
-    case ssl do
+    case config[:ssl] do
       true ->
-        :cowboy.start_https(:http, 100, [
+        :cowboy.start_https("webscocket_https_#{port}", 100, [
           port: port,
-          certfile: ws_config[:cert_file],
-          keyfile: ws_config[:key_file],
+          certfile: config[:cert_file],
+          keyfile: config[:key_file],
         ], [
           env: [dispatch: dispatch]
         ])
       _ ->
-        :cowboy.start_http(:http, 100, [port: port], [env: [dispatch: dispatch]])
+        :cowboy.start_http("websocket_http_#{port}", 100, [port: port], [env: [dispatch: dispatch]])
     end
   end
 

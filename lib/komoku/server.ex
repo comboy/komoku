@@ -9,7 +9,18 @@ defmodule Komoku.Server do
   # It would be nice if it was not a genserver to avoid bottleneck
 
   def start_link do
-    # Apart from websocket we may go with different communication channels, e.g. http server
-    Komoku.Server.Websocket.start_link
+    import Supervisor.Spec
+
+    opts = [strategy: :one_for_one, name: Komoku.Server.Supervisor]
+
+    Application.fetch_env!(:komoku, :servers)
+      |> Enum.map(fn {server_type, config} ->
+        case server_type do
+          :websocket ->
+            #Komoku.Server.Websocket.start_link(config) |> IO.inspect
+            supervisor(Komoku.Server.Websocket, [config], id: "websocket_#{config[:port]}")
+        end
+      end)
+      |> Supervisor.start_link(opts)
   end
 end

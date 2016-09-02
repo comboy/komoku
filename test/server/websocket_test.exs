@@ -3,7 +3,7 @@ defmodule Komoku.Server.WebsocketTest do
   alias Komoku.Storage
 
   setup do
-    {:ok, socket} = Socket.Web.connect("127.0.0.1", 4545)
+    {:ok, socket} = Socket.Web.connect("127.0.0.1", 7272)
     {:ok, socket: socket}
   end
 
