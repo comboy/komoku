@@ -1,5 +1,5 @@
 defmodule Komoku.Util.PerformanceTest do
-  alias Komoku.Storage
+  alias Komoku.Server
 
   def bench do
     storage_get
@@ -9,7 +9,7 @@ defmodule Komoku.Util.PerformanceTest do
   def storage_get do
     fun_prep = fn -> :ok end
     fun = fn(_, key) -> 
-      value = Storage.get(key) 
+      value = Server.get(key) 
       true = value > 0 && value < 1001
     end
     multi_client(:storage_get, fun_prep, fun)
@@ -40,8 +40,8 @@ defmodule Komoku.Util.PerformanceTest do
     # prepare data
     (1..num_keys) |> Enum.each(fn i ->
       key = "test.perf_get_#{i}"
-      Storage.insert_key(key, "numeric")
-      (0..num_values) |> Enum.each(fn _i -> Storage.put(key, :rand.uniform(1000)) end)
+      Server.insert_key(key, "numeric")
+      (0..num_values) |> Enum.each(fn _i -> Server.put(key, :rand.uniform(1000)) end)
     end)
 
     t0 = :os.system_time(:milli_seconds)
@@ -66,7 +66,7 @@ defmodule Komoku.Util.PerformanceTest do
     dt = :os.system_time(:milli_seconds) - t0
     (1..num_keys) |> Enum.each(fn i ->
       key = "test.perf_get_#{i}"
-      Storage.delete_key(key)
+      Server.delete_key(key)
     end)
 
     ops = num_clients * num_loops * num_keys

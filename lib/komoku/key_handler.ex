@@ -1,10 +1,8 @@
 defmodule Komoku.KeyHandler do
+
   # TODO ponder: separate handler modules for different data types? this would  probably require some handy macros to keep it DRY
-  alias Komoku.Storage.Repo
-  alias Komoku.Storage.Schema.DataNumeric
-  alias Komoku.Storage.Schema.DataBoolean
-  alias Komoku.Storage.Schema.DataString
-  alias Komoku.Util
+
+  alias Komoku.Storage
 
   use GenServer
 
@@ -26,7 +24,7 @@ defmodule Komoku.KeyHandler do
   def init(key), do: {:ok, key}
 
   def handle_info(:uptime_init, key) do
-    key = key |> Map.put(:last, get_last_from_db(key))
+    key = key |> Map.put(:last, Storage.last(key))
     key = case key[:last] do
       # If uptim key in the database has true value then update it to false or shedule a msg that will do that
       {true, time} ->
@@ -72,7 +70,7 @@ defmodule Komoku.KeyHandler do
   defp get_last(%{last: last} = key), do: {last, key}
   # when we don't yet have the cache for last value
   defp get_last(key) do
-    last = get_last_from_db(key)
+    last = Storage.last(key)
     {last, key |> Map.put(:last, last)}
   end
 
@@ -102,7 +100,7 @@ defmodule Komoku.KeyHandler do
       true ->
         # TODO we probably want to put it async in some task,
         # then in case it fails one time we switch to sync
-        case store_value(key, value, time) do
+        case Storage.put(key, value, time) do
           {:ok, _dN} -> :ok
           {:error, error} -> {:error, error}
         end
@@ -110,23 +108,6 @@ defmodule Komoku.KeyHandler do
     key = key |> update_last({value, time}) |> key_updated
     {ret, key}
   end
-
-  defp store_value(key, value, time) do
-    params = %{value: value, key_id: key.id, time: time |> Util.ts_to_ecto}
-    # TODO key.type to module time helper in some place to DRY
-    changeset = case key.type do
-      "numeric" ->
-        DataNumeric.changeset(%DataNumeric{}, params)
-      "boolean" ->
-        DataBoolean.changeset(%DataBoolean{}, params)
-      "string" ->
-        DataString.changeset(%DataString{}, params)
-      "uptime" ->
-        DataBoolean.changeset(%DataBoolean{}, params)
-    end
-    Repo.insert(changeset)
-  end
-
 
   # When uptime key is set to true we need to setup msg to switch it back to false later
   def key_updated(%{type: "uptime", last: {true, time}, opts: %{"max_time" => max_time}} = key) do
@@ -154,25 +135,5 @@ defmodule Komoku.KeyHandler do
   defp cast("true", %{type: "boolean"}), do: true
   defp cast("false", %{type: "boolean"}), do: false
   defp cast(value, _key), do: value
-
-  # Retrieve last value and time from DB
-  defp get_last_from_db(key) do
-    import Ecto.Query
-    data_type = case key.type do
-      "numeric" -> DataNumeric
-      "boolean" -> DataBoolean
-      "string" -> DataString
-      "uptime" -> DataBoolean
-    end
-    query = from p in data_type,
-      where: p.key_id == ^key.id, 
-      order_by: [desc: p.time],
-      order_by: [desc: p.id],
-      limit: 1
-    case query |> Repo.one do
-      nil -> nil
-      data -> {data.value, data.time |> Util.ecto_to_ts}
-    end
-  end
 
 end

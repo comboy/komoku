@@ -36,15 +36,15 @@ defmodule Komoku.Server.Websocket do
       {:reply, {:text, %{pub: change} |> Poison.encode!}, req, state}
     end
 
-    def handle_query(%{"get" => %{"key" => key}}), do: Komoku.Storage.get(key)
+    def handle_query(%{"get" => %{"key" => key}}), do: Komoku.Server.get(key)
 
     def handle_query(%{"put" => %{"key" => key, "value" => value} = data}) do
-      :ok = Komoku.Storage.put(key, value, data["time"] || Komoku.Util.ts)
+      :ok = Komoku.Server.put(key, value, data["time"] || Komoku.Util.ts)
       :ack
     end
 
     def handle_query(%{"keys" => _opts}) do
-      Komoku.Storage.list_keys
+      Komoku.Server.list_keys
     end
 
     def handle_query(%{"sub" => %{"key" => key}}) do
@@ -63,7 +63,7 @@ defmodule Komoku.Server.Websocket do
       status = defs |> Enum.reduce(:ok, fn({name, params}, status) ->
         case params do
           %{"type" => type} ->
-            case Komoku.Storage.update_key(name, type, params["opts"] || %{}) do
+            case Komoku.Server.update_key(name, type, params["opts"] || %{}) do
               :ok -> status
               _   -> :error_creating_key
             end

@@ -1,6 +1,6 @@
 defmodule Komoku.KeyMaster do
-  alias Komoku.Storage.Repo
-  alias Komoku.Storage.Schema.Key
+
+  alias Komoku.Storage
 
   use GenServer
 
@@ -20,10 +20,9 @@ defmodule Komoku.KeyMaster do
   end
 
   def handle_info(:do_init, _) do
-    keys = Key
-      |> Repo.all
-      |> Enum.map(fn %Key{type: type, name: name, id: id, opts: opts} ->
-        params = %{type: type, id: id, opts: opts} |> prepare_opts
+    keys = Storage.list_keys
+      |> Enum.map(fn (%{id: _id, name: name, type: type} = params) ->
+        params = params |> prepare_opts
         case type do
           "uptime" -> # For uptime keys we need to spawn handlers right away in case they need updates
             {name, params |> Map.put(:handler, spawn_handler(name, params))}
@@ -42,15 +41,10 @@ defmodule Komoku.KeyMaster do
   # Insert a new key
   def handle_call({:insert, name, type, opts}, _from, keys) do
     # TODO handle case when the key is already present and type matches, should return OK
-    changeset = Key.changeset(%Key{}, %{name: name |> to_string, type: type, opts: opts})
-    case Repo.insert(changeset) do
+    case Storage.create_key(%{name: name |> to_string, type: type, opts: opts}) do
       {:ok, key} ->
         {:reply, :ok, keys |> Map.put(name, %{type: key.type, id: key.id, opts: opts} |> prepare_opts) }
       {:error, error} ->
-        # TODO abstact error messages away from ecto. We probably want
-        # * {:error, :invalid_key_name}
-        # * {:error, :already_exists}
-        # * {:error, :invalid opts} later?
         {:reply, {:error, error}, keys}
     end
   end
@@ -64,9 +58,7 @@ defmodule Komoku.KeyMaster do
         # Type is fine, we just need to update the opts
         # TODO opts validation, not sure if it belongs in Schema.Key changeset or somewhere in KM
         # TODO remove opts that match defaults not to store them in db
-        dbkey = Repo.get!(Key, key.id) # TODO we shouldn't need to do this select first
-        dbkey = dbkey |> Ecto.Changeset.change(opts: key.opts |> Map.merge(opts))
-        case Repo.update(dbkey) do
+        case Storage.update_key_opts(key.id, key.opts |> Map.merge(opts)) do
           {:ok, key_} ->
             {:reply, :ok, keys |> Map.put(name, key |> Map.put(:opts, key_.opts))}
           {:error, error} ->
@@ -92,7 +84,7 @@ defmodule Komoku.KeyMaster do
         # * remove subscriptions
         # PONDER: key is removed then key with the same name is added, perhaps processes that subscribed to this name changes still want to hear about them
         # Komoku.SubscriptionManager.unsubscribe_all(name)
-        Key |> Repo.get(id) |> Repo.delete
+        :ok = Storage.delete_key(id)
         {:reply, :ok, cache |> Map.delete(name)}
     end
   end

@@ -1,9 +1,13 @@
 defmodule Komoku.Storage do
+
   alias Komoku.Storage.Repo
+  alias Komoku.Storage.Schema.DataNumeric
+  alias Komoku.Storage.Schema.DataBoolean
+  alias Komoku.Storage.Schema.DataString
+  alias Komoku.Storage.Schema.Key
+
   alias Komoku.Util
   alias Komoku.KeyMaster, as: KM # TODO KM and KH look too much alike, use different aliases
-  alias Komoku.KeyHandler, as: KH
-
 
   def start_link do
     # TODO would love to know how to get rid of this from here,
@@ -13,6 +17,7 @@ defmodule Komoku.Storage do
       Ecto.Adapters.SQL.Sandbox.mode(Komoku.Storage.Repo, {:shared, self()})
     end
 
+    #TODO it would probably be more fitting now to start KM from Server
     import Supervisor.Spec
 
     children = [
@@ -22,64 +27,63 @@ defmodule Komoku.Storage do
     Supervisor.start_link(children, opts)
   end
 
-  # TODO find a good place to put doc about types and opts (some opts are common)
-  #
-  # Add a new key. TODO proper docs, here are available opts to have them in one place:
-  # * same_value_resolution - update to key with same value won't be stored in db until time difference is greater than this value [seconds, can be float]
-  # * min_resolution - if multiple values will be pushed within that time, only one value will be stored in db [seconds, can be float] - we probably want e.g. averaging for numeric
-  #
-  # type specific:
-  # * uptime
-  # ** max_time - time after which value automatically goes to false [seconds, can be float]
-  def insert_key(name, type, opts \\ %{}), do: KM.insert(name, type, opts)
-  def update_key(name, type, opts \\ %{}), do: KM.update(name, type, opts)
+  def create_key(%{type: type, name: name, opts: opts}) do
+    changeset = Key.changeset(%Key{}, %{name: name |> to_string, type: type, opts: opts})
+    # TODO abstact error messages away from ecto. We probably want
+    # * {:error, :invalid_key_name}
+    # * {:error, :already_exists}
+    # * {:error, :invalid opts} later?
+    Repo.insert(changeset)
+  end
 
-  def delete_key(name), do: KM.delete(name)
+  def update_key_opts(id, opts) do
+    dbkey = Repo.get!(Key, id) # TODO we shouldn't need to do this select first
+    dbkey = dbkey |> Ecto.Changeset.change(opts: opts)
+    Repo.update(dbkey)
+  end
+
+  def delete_key(id) do
+    {:ok, _key} = Key |> Repo.get(id) |> Repo.delete
+    :ok
+  end
 
   def list_keys do
-    KM.list |> Enum.map(fn {key, opts} ->
-      {key, opts |> Map.delete(:handler)}
-    end)
-    |> Enum.into(%{})
+    Key 
+      |> Repo.all 
+      |> Enum.map(fn %Key{type: type, name: name, id: id, opts: opts} ->
+        %{type: type, id: id, opts: opts, name: name}
+      end)
   end
 
-  def put(name, value), do: put(name, value, Util.ts)
-
-  def put(name, value, time) do
-    case KM.handler(name) do
-      nil ->
-        case guess_type(value) do
-          "unknown" ->
-            {:error, :unknown_value_type}
-          type ->
-            insert_key(name, type)
-            put(name, value, time)
-        end
-      handler ->
-        handler |> KH.put(value, time)
-    end
+  def put(%{id: id, type: type} = _key, value, time) do
+    params = %{value: value, key_id: id, time: time |> Util.ts_to_ecto}
+    data_changeset(type, params) |> Repo.insert #TODO, again, errors abstraction
   end
 
-  def get(name) do
-    case last(name) do
+  # Get last value for given key. Returns tuple {value, time} or nil
+  def last(%{id: id, type: type} = _key) do
+    import Ecto.Query
+    query = from p in data_type(type),
+      where: p.key_id == ^id, 
+      order_by: [desc: p.time],
+      order_by: [desc: p.id],
+      limit: 1
+    case query |> Repo.one do
       nil -> nil
-      {value, _time} -> value
+      data -> {data.value, data.time |> Util.ecto_to_ts}
     end
   end
 
-  def last(name) do
-    case KM.handler(name) do
-      nil -> nil
-      pid ->  KH.last(pid)
-    end
-  end
+  defp data_type("numeric"), do: DataNumeric
+  defp data_type("boolean"), do: DataBoolean
+  defp data_type("uptime"),  do: DataBoolean
+  defp data_type("string"),  do: DataString
 
-  defp guess_type(value) when is_number(value), do: "numeric"
-  defp guess_type(value) when is_boolean(value), do: "boolean"
-  defp guess_type("true"), do: "boolean"
-  defp guess_type("false"), do: "boolean"
-  defp guess_type(str) when is_binary(str), do: "string"
-  defp guess_type(_), do: "unknown"
+  defp data_changeset("numeric", params), do: DataNumeric.changeset(%DataNumeric{}, params)
+  defp data_changeset("boolean", params), do: DataBoolean.changeset(%DataBoolean{}, params)
+  defp data_changeset("uptime", params),  do: DataBoolean.changeset(%DataBoolean{}, params)
+  defp data_changeset("string", params),  do: DataString.changeset(%DataString{}, params)
+ 
 
 end
 
