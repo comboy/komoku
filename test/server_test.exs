@@ -57,6 +57,12 @@ defmodule Komoku.ServerTest do
     assert Server.get("num") == 123
   end
 
+  test "store a value with time" do
+    ts = 1473000000
+    :ok = Server.put("num_with_time", 123, ts)
+    {123, ^ts} = Server.last("num_with_time")
+  end
+
   test "get the last value" do
     :ok = Server.insert_key "num2", "numeric"
     assert Server.get("num2") == nil

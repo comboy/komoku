@@ -43,6 +43,14 @@ defmodule Komoku.Server.Websocket do
       :ack
     end
 
+    def handle_query(%{"last" => %{"key" => key}}) do
+      case Komoku.Server.last(key) |> IO.inspect do
+        {value, time} -> %{value: value, time: time}
+        nil -> nil
+      end
+    end
+
+
     def handle_query(%{"keys" => _opts}) do
       Komoku.Server.list_keys
     end
@@ -63,6 +71,14 @@ defmodule Komoku.Server.Websocket do
       status = defs |> Enum.reduce(:ok, fn({name, params}, status) ->
         case params do
           %{"type" => type} ->
+
+            # Backwards compatibility
+            params = if params["max_time"] do
+              params |> Map.put("opts", (params["opts"] || %{}) |> Map.put("max_time", params["max_time"]))
+            else
+              params
+            end
+
             case Komoku.Server.update_key(name, type, params["opts"] || %{}) do
               :ok -> status
               _   -> :error_creating_key

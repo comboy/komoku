@@ -84,6 +84,5 @@ defmodule Komoku.Storage do
   defp data_changeset("uptime", params),  do: DataBoolean.changeset(%DataBoolean{}, params)
   defp data_changeset("string", params),  do: DataString.changeset(%DataString{}, params)
  
-
 end
 

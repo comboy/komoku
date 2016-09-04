@@ -22,6 +22,13 @@ defmodule Komoku.Server.WebsocketTest do
     assert recv(c[:socket]) == 7
   end
 
+  test "get last", c do
+    ts = 1473007432
+    :ok = Server.put("ws1_last", 8, ts)
+    c[:socket] |> push(%{last: %{key: "ws1_last"}})
+    assert recv(c[:socket]) == %{"value" => 8, "time" => ts}
+  end
+
   test "list keys", c do
     :ok = Server.insert_key("ws_list", "numeric")
     c[:socket] |> push(%{keys: %{}})
