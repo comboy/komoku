@@ -7,21 +7,27 @@ defmodule Komoku.Storage do
   alias Komoku.Storage.Schema.Key
 
   alias Komoku.Util
-  alias Komoku.KeyMaster, as: KM # TODO KM and KH look too much alike, use different aliases
 
-  def start_link do
-    # TODO would love to know how to get rid of this from here,
-    # test_helper gets evaluated after the application is already started
+  # TODO would love to know how to get rid of this from here,
+  # We need this preparation for test, it must go after repo start and before servers start
+  defmodule TestPrep do
     if Mix.env == :test do
-      :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo)
+      def start_link do
+      :ok = Ecto.Adapters.SQL.Sandbox.checkout(Komoku.Storage.Repo)
       Ecto.Adapters.SQL.Sandbox.mode(Komoku.Storage.Repo, {:shared, self()})
+      {:ok, self}
     end
+    else
+      def start_link, do: {:ok, self}
+    end
+  end
 
-    #TODO it would probably be more fitting now to start KM from Server
-    import Supervisor.Spec
+def start_link do
+  import Supervisor.Spec
 
-    children = [
-      worker(KM, [])
+  children = [
+    supervisor(Repo, []),
+    worker(TestPrep, []),
     ]
     opts = [strategy: :one_for_one, name: Komoku.Storage.Supervisor]
     Supervisor.start_link(children, opts)

@@ -8,8 +8,8 @@ defmodule Komoku.Server do
   # Should it also start e.g. websocket server
   # It would be nice if it was not a genserver to avoid bottleneck
 
-  alias Komoku.KeyMaster, as: KM # TODO KM and KH look too much alike, use different aliases
-  alias Komoku.KeyHandler, as: KH
+  alias Komoku.KeyMaster
+  alias Komoku.KeyHandler
   alias Komoku.Util
 
   def start_link do
@@ -17,7 +17,7 @@ defmodule Komoku.Server do
 
     opts = [strategy: :one_for_one, name: Komoku.Server.Supervisor]
 
-    Application.fetch_env!(:komoku, :servers)
+    servers = Application.fetch_env!(:komoku, :servers)
       |> Enum.map(fn {server_type, config} ->
         case server_type do
           :websocket ->
@@ -25,7 +25,10 @@ defmodule Komoku.Server do
             supervisor(Komoku.Server.Websocket, [config], id: "websocket_#{config[:port]}")
         end
       end)
-      |> Supervisor.start_link(opts)
+
+    children = [ worker(KeyMaster, []) | servers]
+
+    Supervisor.start_link(children, opts)
   end
 
   # TODO find a good place to put doc about types and opts (some opts are common)
@@ -37,13 +40,13 @@ defmodule Komoku.Server do
   # type specific:
   # * uptime
   # ** max_time - time after which value automatically goes to false [seconds, can be float]
-  def insert_key(name, type, opts \\ %{}), do: KM.insert(name, type, opts)
-  def update_key(name, type, opts \\ %{}), do: KM.update(name, type, opts)
+  def insert_key(name, type, opts \\ %{}), do: KeyMaster.insert(name, type, opts)
+  def update_key(name, type, opts \\ %{}), do: KeyMaster.update(name, type, opts)
 
-  def delete_key(name), do: KM.delete(name)
+  def delete_key(name), do: KeyMaster.delete(name)
 
   def list_keys do
-    KM.list |> Enum.map(fn {key, opts} ->
+    KeyMaster.list |> Enum.map(fn {key, opts} ->
       {key, opts |> Map.delete(:handler)}
     end)
     |> Enum.into(%{})
@@ -52,7 +55,7 @@ defmodule Komoku.Server do
   def put(name, value), do: put(name, value, Util.ts)
 
   def put(name, value, time) do
-    case KM.handler(name) do
+    case KeyMaster.handler(name) do
       nil ->
         case guess_type(value) do
           "unknown" ->
@@ -62,7 +65,7 @@ defmodule Komoku.Server do
             put(name, value, time)
         end
       handler ->
-        handler |> KH.put(value, time)
+        handler |> KeyHandler.put(value, time)
     end
   end
 
@@ -74,9 +77,9 @@ defmodule Komoku.Server do
   end
 
   def last(name) do
-    case KM.handler(name) do
+    case KeyMaster.handler(name) do
       nil -> nil
-      pid ->  KH.last(pid)
+      pid ->  KeyHandler.last(pid)
     end
   end
 

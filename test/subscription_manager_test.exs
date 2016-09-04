@@ -42,4 +42,14 @@ defmodule Komoku.SubscriptionManagerTest do
     SM.publish(%{key: "foo", time: Komoku.Util.ts, value: 32})
     assert_receive {:key_update, %{key: "foo", time: _time, value: 32}}
   end
+
+  test "stats" do
+    SM.subscribe("stats1")
+    Task.start(fn ->
+      SM.subscribe("stats1")
+      100 |> :timer.sleep
+    end)
+    10 |> :timer.sleep # let the task subscribe
+    assert SM.stats["stats1"] == 2
+  end
 end

@@ -9,6 +9,7 @@ defmodule Komoku.SubscriptionManager do
   def unsubscribe_all(pid) when is_pid(pid), do: GenServer.call(__MODULE__, {:unsubscribe_all, pid})
   def unsubscribe_all(name), do: GenServer.call(__MODULE__, {:unsubscribe_all, name})
   def publish(%{key: _key, time: _time} = change), do: GenServer.cast(__MODULE__, {:publish, change})
+  def stats, do: GenServer.call(__MODULE__, :stats)
 
   def init(_) do
     # TODO setup periodical msg to cleanup dead processes
@@ -16,15 +17,7 @@ defmodule Komoku.SubscriptionManager do
     {:ok, %{}}
   end
 
-  def handle_info(:cleanup, subs) do
-    { :noreply,
-      subs |> Enum.map(fn {key, pids} ->
-        {key, pids |> Enum.filter(&Process.alive?/1)}
-      end)
-      |> Enum.into(%{})
-    }
-  end
-
+  def handle_info(:cleanup, subs), do: {:noreply, subs |> cleanup}
 
   def handle_call({:subscribe, name}, {pid, _ref}, subs) do
     {:reply, :ok, 
@@ -55,11 +48,30 @@ defmodule Komoku.SubscriptionManager do
     {:reply, :ok, subs |> Map.delete(name)}
   end
 
+  def handle_call(:stats, _from, subs) do
+    stats = subs |> cleanup |> Enum.map(fn {key, pids} ->
+      {key, pids |> Enum.count}
+    end) |> Enum.into(%{})
+    {:reply, stats, subs}
+  end
+
+
   def handle_cast({:publish, change}, subs) do
     (subs[change.key] || []) |> Enum.each(fn pid ->
       send(pid, {:key_update, change})
     end)
     {:noreply, subs}
+  end
+
+  defp cleanup(subs) do
+    subs 
+      # Remove dead processes
+      |> Enum.map(fn {key, pids} ->
+        {key, pids |> Enum.filter(&Process.alive?/1)}
+      end)
+      # Remove keys without subscriptions
+      |> Enum.filter(fn {_key, pids} -> length(pids) > 0 end)
+      |> Enum.into(%{})
   end
 
 end

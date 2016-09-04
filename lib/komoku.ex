@@ -11,7 +11,6 @@ defmodule Komoku do
       # Starts a worker by calling: Komoku.Worker.start_link(arg1, arg2, arg3)
       # worker(Komoku.Worker, [arg1, arg2, arg3]),
       worker(Komoku.SubscriptionManager, []),
-      supervisor(Komoku.Storage.Repo, []), # TODO start Storage.Repo from within Storage
       supervisor(Komoku.Storage, []),
       supervisor(Komoku.Server, [])
     ]
