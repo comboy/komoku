@@ -11,6 +11,7 @@ defmodule Komoku.KeyMaster do
   def delete(name), do: GenServer.call __MODULE__, {:delete, name}
   def handler(name), do: GenServer.call __MODULE__, {:handler, name}
   def list, do: GenServer.call __MODULE__, :list
+  def stats, do: GenServer.call __MODULE__, :stats
 
   # Implementation
 
@@ -103,6 +104,18 @@ defmodule Komoku.KeyMaster do
         handler = spawn_handler(name, params)
         {:reply, handler, keys |> Map.put(name, keys[name] |> Map.put(:handler, handler))}
     end
+  end
+
+  def handle_call(:stats, _from, keys) do
+    {total, active} = keys |> Enum.reduce({0,0}, fn ({_key, params}, {total, active}) ->
+      case params do
+        %{handler: _handler} ->
+          {total + 1, active + 1}
+        _ -> 
+          {total + 1, active}
+      end
+    end)
+    {:reply, %{total: total, active: active}, keys}
   end
 
   defp spawn_handler(name, params) do

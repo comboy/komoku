@@ -2,10 +2,6 @@ defmodule Komoku.Server.Websocket do
 
   require Logger
 
-  def init(config) do
-    start_link(config)
-  end
-
   def start_link(config) do
     port = config[:port]
     name = config[:name] || "websocket_#{port}"
@@ -31,6 +27,5 @@ defmodule Komoku.Server.Websocket do
         :cowboy.start_http(name, 100, [port: port], [env: [dispatch: dispatch]])
     end
   end
-
 
 end

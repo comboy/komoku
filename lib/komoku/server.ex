@@ -40,12 +40,23 @@ defmodule Komoku.Server do
   # type specific:
   # * uptime
   # ** max_time - time after which value automatically goes to false [seconds, can be float]
-  def insert_key(name, type, opts \\ %{}), do: KeyMaster.insert(name, type, opts)
-  def update_key(name, type, opts \\ %{}), do: KeyMaster.update(name, type, opts)
+  def insert_key(name, type, opts \\ %{}) do
+    op_count(:insert_key)
+    KeyMaster.insert(name, type, opts)
+  end
 
-  def delete_key(name), do: KeyMaster.delete(name)
+  def update_key(name, type, opts \\ %{}) do
+    op_count(:update_key)
+    KeyMaster.update(name, type, opts)
+  end
+
+  def delete_key(name) do
+    op_count(:delete_key)
+    KeyMaster.delete(name)
+  end
 
   def list_keys do
+    op_count(:list_keys)
     KeyMaster.list |> Enum.map(fn {key, opts} ->
       {key, opts |> Map.delete(:handler)}
     end)
@@ -65,22 +76,22 @@ defmodule Komoku.Server do
             put(name, value, time)
         end
       handler ->
+        op_count(:put)
         handler |> KeyHandler.put(value, time)
     end
   end
 
   def get(name) do
-    case last(name) do
+    op_count(:get)
+    case get_last(name) do
       nil -> nil
       {value, _time} -> value
     end
   end
 
   def last(name) do
-    case KeyMaster.handler(name) do
-      nil -> nil
-      pid ->  KeyHandler.last(pid)
-    end
+    op_count(:last)
+    get_last(name)
   end
 
   defp guess_type(value) when is_number(value), do: "numeric"
@@ -90,5 +101,15 @@ defmodule Komoku.Server do
   defp guess_type(str) when is_binary(str), do: "string"
   defp guess_type(_), do: "unknown"
 
-  
+  defp op_count(name) do
+    Komoku.Stats.increment(:server_op_count, name)
+  end
+
+  defp get_last(name) do
+    case KeyMaster.handler(name) do
+      nil -> nil
+      pid ->  KeyHandler.last(pid)
+    end
+  end
+ 
 end

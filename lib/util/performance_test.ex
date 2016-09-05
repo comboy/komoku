@@ -17,7 +17,7 @@ defmodule Komoku.Util.PerformanceTest do
 
   def network_get do
     fun_prep = fn ->
-      {:ok, socket} = Socket.Web.connect("127.0.0.1", 4545)
+      {:ok, socket} = Socket.Web.connect("127.0.0.1", 7272)
       socket
     end
 

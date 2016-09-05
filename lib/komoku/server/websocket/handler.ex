@@ -1,17 +1,24 @@
 defmodule Komoku.Server.Websocket.Handler do
-  require Logger
 
   @behaviour :cowboy_websocket_handler
+
+  require Logger
+
+  alias Komoku.Stats
 
   def init({_tcp, _http}, _req, _opts) do
     {:upgrade, :protocol, :cowboy_websocket}
   end
 
   def websocket_init(_transport, req, opts) do
+    Stats.increment(:clients_count, opts[:name])
     {:ok, req, %{opts: opts}}
   end
 
-  def websocket_terminate(_reason, _req, _state), do: :ok
+  def websocket_terminate(_reason, _req, %{opts: opts}) do
+    Stats.decrement(:clients_count, opts[:name])
+    :ok
+  end
 
   def websocket_handle({:text, content}, req, state) do
     Logger.debug "#{self |> inspect} > #{content}"
