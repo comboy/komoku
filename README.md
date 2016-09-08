@@ -70,3 +70,15 @@ HA: log, what's the alarm state (armed, disabled, waiting), selected radio stati
 * http server
 * komowku-web with graphs
 * string opt to only allow specified set of values (careful with `update_key` and historical values that may not comply)
+
+## Architecture
+
+`Komoku.Server` is the main access point. You can call on it things like `get`, `put` or `list_keys`. It also starts outside interfacess like `Komoku.Server.Websocket` according to config.exs. 
+
+Each key is handled by a separate process (`KeyHandler`). It stores last value cache in its state, it's responsible for appropriate key value updates (e.g. change value to false for uptime type of key), consolidating data, and fetching it from `Storage` when necessary.
+
+`Storage` is responsible for persistant value store. Basically a database interface.
+
+`KeyMaster` manages keys. It keeps list of all the keys, creates, updates and removes them. It also manages `KeyHandler` processes.
+
+`SubscriptionManager` - you won't guess! `KeyHandler` publishes changes of keys to it, and client processes created by e.g. `Komoku.Server.Websocket` can subscribe to these changes. 
