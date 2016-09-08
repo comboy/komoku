@@ -11,7 +11,7 @@ defmodule Komoku do
       # Starts a worker by calling: Komoku.Worker.start_link(arg1, arg2, arg3)
       # worker(Komoku.Worker, [arg1, arg2, arg3]),
       worker(Komoku.SubscriptionManager, []),
-      supervisor(Komoku.Stats, []),
+      supervisor(Komoku.Stats, []), # TODO add abilitity to disable it in config, all collection are casts so that's not a poblem, just need some error messages for retrievieng
       supervisor(Komoku.Storage, []),
       supervisor(Komoku.Server, [])
     ]

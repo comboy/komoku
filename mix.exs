@@ -15,7 +15,7 @@ defmodule Komoku.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :ecto, :postgrex, :cowboy],
+    [applications: [:logger, :ecto, :postgrex, :cowboy, :gproc],
      mod: {Komoku, []}]
   end
 
@@ -33,6 +33,7 @@ defmodule Komoku.Mixfile do
      {:socket, "~> 0.3.5"},#, only: :test}, # testing websocket server, but also perf test
      {:cowboy, "~> 1.0", optional: true}, # websocket server
      {:poison, "~> 2.0"}, # JSON
+     {:gproc, "~> 0.6.1"}, # process registry
      {:postgrex, "0.11.2"}] # database driver
   end
 

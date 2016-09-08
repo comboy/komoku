@@ -22,16 +22,12 @@ defmodule Komoku.KeyMaster do
 
   def handle_info(:do_init, _) do
     keys = Storage.list_keys
-      |> Enum.map(fn (%{id: _id, name: name, type: type} = params) ->
-        params = params |> prepare_opts
-        case type do
-          "uptime" -> # For uptime keys we need to spawn handlers right away in case they need updates
-            {name, params |> Map.put(:handler, spawn_handler(name, params))}
-           _ ->
-            {name, params}
-        end
+      |> Enum.map(fn (%{id: _id, name: name, type: _type} = params) ->
+        {name, params |> prepare_opts}
       end)
       |> Enum.into(%{})
+      # For uptime keys we need to spawn handlers right away in case they need updates
+      |> start_uptime_key_handlers
     {:noreply, keys}
   end
 
@@ -73,56 +69,61 @@ defmodule Komoku.KeyMaster do
   end
 
   # Delete a key
-  def handle_call({:delete, name}, _from, cache) do
-    case cache[name] do
+  def handle_call({:delete, name}, _from, keys) do
+    case keys[name] do
       nil -> # key is not present
-        {:reply, :ok, cache} # sure bro, I deleted it (I guess there's no need for an error)
-      %{type: _type, id: id} = key ->
+        {:reply, :ok, keys} # sure bro, I deleted it (I guess there's no need for an error)
+      %{type: _type, id: id} ->
         # * remove all existing data points
         #   should be done with ecto has_many
         # * kill handler if present
-        key[:handler] && GenServer.stop(key[:handler], :normal)
+        case handler_pid(name) do
+          :undefined -> :ok
+          _pid -> Komoku.KeyMaster.Supervisor.stop_kh(name)
+        end
         # * remove subscriptions
         # PONDER: key is removed then key with the same name is added, perhaps processes that subscribed to this name changes still want to hear about them
         # Komoku.SubscriptionManager.unsubscribe_all(name)
         :ok = Storage.delete_key(id)
-        {:reply, :ok, cache |> Map.delete(name)}
+        {:reply, :ok, keys |> Map.delete(name)}
     end
   end
 
   # List all keys
-  def handle_call(:list, _from, cache), do: {:reply, cache, cache}
+  def handle_call(:list, _from, keys), do: {:reply, keys, keys}
 
   # Return pid of the process handling given key
   def handle_call({:handler, name}, _from, keys) do
     case keys[name] do
       nil ->
         {:reply, nil, keys}
-      %{handler: handler} ->
-        {:reply, handler, keys}
       params ->
-        handler = spawn_handler(name, params)
-        {:reply, handler, keys |> Map.put(name, keys[name] |> Map.put(:handler, handler))}
+        case handler_pid(name) do
+          :undefined ->
+            pid = spawn_handler(name, params)
+            {:reply, pid, keys}
+          pid ->
+            {:reply, pid, keys}
+        end
     end
   end
 
   def handle_call(:stats, _from, keys) do
-    {total, active} = keys |> Enum.reduce({0,0}, fn ({_key, params}, {total, active}) ->
-      case params do
-        %{handler: _handler} ->
-          {total + 1, active + 1}
-        _ -> 
-          {total + 1, active}
+    {total, active} = keys |> Enum.reduce({0,0}, fn ({name, _params}, {total, active}) ->
+      case handler_pid(name) do
+        :undefined -> {total + 1, active}
+        _pid -> {total + 1, active + 1}
       end
     end)
     {:reply, %{total: total, active: active}, keys}
   end
 
   defp spawn_handler(name, params) do
-    # TODO this needs to go through supervision tree, and key handler process failure can't brink down key master
-    {:ok, pid} = Komoku.KeyHandler.start_link(name, params)
+    {:ok, pid} = Komoku.KeyMaster.Supervisor.start_kh(name, params)
     pid
   end
+
+  defp handler_pid(name), do: {:n, :l, {:kh, name}} |> :gproc.whereis_name
 
   defp prepare_opts(params), do: params |> Map.put(:opts, default_opts(params) |> Map.merge(params[:opts] || %{}))
 
@@ -134,5 +135,16 @@ defmodule Komoku.KeyMaster do
       same_value_resolution: 60,
       min_resolution: 1
     }
+  end
+
+  defp start_uptime_key_handlers(keys) do
+    keys
+      |> Enum.filter(fn {_name, params} -> params[:type] == "uptime" end)
+      |> Enum.each(fn {name, params} ->
+        if handler_pid(name) == :undefined do
+          spawn_handler(name, params)
+        end
+      end)
+    keys
   end
 end

@@ -66,6 +66,14 @@ defmodule Komoku.Server.WebsocketTest do
     assert recv(c[:socket]) == "ack" # if subscription was stil lon first received msg would be a notification
   end
 
+  test "ssl connection" do
+    {:ok, socket} = Socket.Web.connect("127.0.0.1", 7273, secure: true)
+    socket |> push(%{put: %{key: "wss1", value: 1}})
+    assert recv(socket) == "ack"
+    socket |> push(%{get: %{key: "wss1"}})
+    assert recv(socket) == 1 
+  end
+
 
   defp push(socket, data) do
     socket |> Socket.Web.send!({:text, data |> Poison.encode!})

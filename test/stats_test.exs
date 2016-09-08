@@ -53,5 +53,7 @@ defmodule Komoku.StatsTest do
     Server.list_keys
     assert c_list_keys + 1 == Stats.get(:server_op_count, :list_keys)
   end
+
+  # TODO websocket clients count
 end
 

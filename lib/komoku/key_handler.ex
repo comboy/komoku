@@ -14,14 +14,19 @@ defmodule Komoku.KeyHandler do
   # get the last stored value
   def put(pid, value, time), do: GenServer.call pid, {:put, value, time}
 
-  # Implementation
+  # FIXME I think HK won't receive info about updated opts, it should handle updating opts itself maybe
 
-  def init(%{type: "uptime"} = key) do
+  # Implementation
+  def init(key) do
+    :gproc.reg({:n, :l, {:kh, key[:name]}})
+    type_init(key)
+  end
+
+  def type_init(%{type: "uptime"} = key) do
     send(self, :uptime_init)
     {:ok, key}
   end
-
-  def init(key), do: {:ok, key}
+  def type_init(key), do: {:ok, key}
 
   def handle_info(:uptime_init, key) do
     key = key |> Map.put(:last, Storage.last(key))

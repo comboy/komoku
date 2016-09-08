@@ -26,7 +26,7 @@ defmodule Komoku.Server do
         end
       end)
 
-    children = [ worker(KeyMaster, []) | servers]
+    children = [ supervisor(Komoku.KeyMaster.Supervisor, []) | servers]
 
     Supervisor.start_link(children, opts)
   end

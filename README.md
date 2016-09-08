@@ -56,7 +56,6 @@ HA: log, what's the alarm state (armed, disabled, waiting), selected radio stati
 
 ### Polishing and optimization
 
-* reorg Storage vs Server
 * KH supervisor, they are currently linked to master
 * better error handling, there are supervisors but incorrect user input shouldn't be resulting in any process crash
 * unused key processes can be killed when there's like 100K+ of them
