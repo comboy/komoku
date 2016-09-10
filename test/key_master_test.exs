@@ -20,7 +20,7 @@ defmodule Komoku.KeyMasterTest do
     Server.put("km_sup", 123)
     pid = KeyMaster.handler("km_sup")
     pid |> Process.exit(:kill)
-    100 |> :timer.sleep # plenty of time to restart ;)
+    10 |> :timer.sleep # plenty of time to restart ;)
     assert 123 == Server.get("km_sup")
   end
 
@@ -30,7 +30,7 @@ defmodule Komoku.KeyMasterTest do
     Server.put("km_sup2", 123)
     pid = KeyMaster.handler("km_sup2")
     pid |> Process.exit(:kill)
-    100 |> :timer.sleep
+    10 |> :timer.sleep
     assert 123 == Server.get("km_sup2")
     assert Process.whereis(Komoku.KeyMaster) == km_pid
   end

@@ -1,4 +1,5 @@
-defmodule Komoku.Server.Websocket.Handler do
+# Websocket API version 2
+defmodule Komoku.Server.Websocket.HandlerV2 do
 
   @behaviour :cowboy_websocket_handler
 
@@ -25,7 +26,7 @@ defmodule Komoku.Server.Websocket.Handler do
     {reply, state} = case Poison.decode(content) do
       {:ok, query} ->
         # authontication query will need separate case so that it can modify the state
-        {handle_query(query), state}
+        {query |> handle_query |> wrap_result |> append_query_id(query), state}
       {:error, _} ->
         {%{error: "invalid_json"}, state}
     end
@@ -41,63 +42,61 @@ defmodule Komoku.Server.Websocket.Handler do
     {:reply, {:text, %{pub: change} |> Poison.encode!}, req, state}
   end
 
-  def handle_query(%{"get" => %{"key" => key}}), do: Komoku.Server.get(key)
+  def handle_query(%{"get" => %{"key" => key}}) do
+    {:ok, Komoku.Server.get(key)}
+  end
 
   def handle_query(%{"put" => %{"key" => key, "value" => value} = data}) do
-    :ok = Komoku.Server.put(key, value, data["time"] || Komoku.Util.ts)
-    :ack
+    Komoku.Server.put(key, value, data["time"] || Komoku.Util.ts)
   end
 
   def handle_query(%{"last" => %{"key" => key}}) do
-    case Komoku.Server.last(key) do
+    result = case Komoku.Server.last(key) do
       {value, time} -> %{value: value, time: time}
       nil -> nil
     end
+    {:ok, result}
   end
 
 
   def handle_query(%{"keys" => _opts}) do
-    Komoku.Server.list_keys
+    {:ok, Komoku.Server.list_keys}
   end
 
   def handle_query(%{"sub" => %{"key" => key}}) do
-    :ok = Komoku.SubscriptionManager.subscribe(key)
-    :ack
+    Komoku.SubscriptionManager.subscribe(key)
   end
 
   def handle_query(%{"unsub" => %{"key" => key}}) do
-    :ok = Komoku.SubscriptionManager.unsubscribe(key)
-    :ack
+    Komoku.SubscriptionManager.unsubscribe(key)
   end
 
   def handle_query(%{"define" => defs}) do
-    # PONDER not sure it's worth doing the status, we need to handle exceptions anyway somehew
-    # NEWAPI we probably want to provide hash of results for each key definition?
-    status = defs |> Enum.reduce(:ok, fn({name, params}, status) ->
+    defs |> Enum.reduce(:ok, fn({name, params}, status) ->
       case params do
         %{"type" => type} ->
-
-          # Backwards compatibility
-          params = if params["max_time"] do
-            params |> Map.put("opts", (params["opts"] || %{}) |> Map.put("max_time", params["max_time"]))
-          else
-            params
-          end
-
           case Komoku.Server.update_key(name, type, params["opts"] || %{}) do
             :ok -> status
-            _   -> :error_creating_key
+            _   -> {:error, :error_creating_key}
           end
         _ ->
-          :type_not_provided
+          {:error, :type_not_provided}
       end
     end)
-    case status do
-      :ok -> :ack
-      err -> {:error, err}
+  end
+
+  def handle_query(_), do: {:error, :invalid_query}
+
+  defp wrap_result(value) do
+    case value do
+      :ok -> %{result: "ok"}
+      {:ok, value} -> %{result: value}
+      {:error, error} -> %{error: error}
     end
   end
 
-  def handle_query(_), do: :invalid_query
-
+  # If query_id param is provided we include it in the answer.
+  # This is to allow parallel execution of multiple queries without mixing the results
+  defp append_query_id(result, %{"query_id" => query_id}), do: result |> Map.put(:query_id, query_id)
+  defp append_query_id(result, _query), do: result
 end

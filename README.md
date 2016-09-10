@@ -51,12 +51,11 @@ HA: log, what's the alarm state (armed, disabled, waiting), selected radio stati
 
 * compacting historical data
 * fetching historical data
-** treating booleans as timespans
+* treating booleans as timespans
 * user authentication
 
 ### Polishing and optimization
 
-* KH supervisor, they are currently linked to master
 * better error handling, there are supervisors but incorrect user input shouldn't be resulting in any process crash
 * unused key processes can be killed when there's like 100K+ of them
 * add bench for 100K+ keys

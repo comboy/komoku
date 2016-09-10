@@ -10,6 +10,10 @@ config :komoku, :servers, [
     port: 7272
   ],
   websocket: [
+    port: 7274,
+    api_version: 2
+  ],
+  websocket: [
     port: 7273,
     ssl: true,
     cert_file: "config/cert.pem",

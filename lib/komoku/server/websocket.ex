@@ -6,9 +6,14 @@ defmodule Komoku.Server.Websocket do
     port = config[:port]
     name = config[:name] || "websocket_#{port}"
 
+    handler = case config[:api_version] do
+      2 -> Komoku.Server.Websocket.HandlerV2
+      _ -> Komoku.Server.Websocket.HandlerV1
+    end
+
     dispatch = :cowboy_router.compile([
       { :_, # all hostnames
-        [{"/", Komoku.Server.Websocket.Handler, [%{name: name}]}]
+        [{"/", handler, [%{name: name}]}]
       }
     ])
 
