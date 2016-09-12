@@ -190,6 +190,21 @@ defmodule Komoku.ServerTest do
     assert Server.get("uptime_change3") == false
   end
 
+  test "uptime opts are getting properly updated" do
+    key = "uptime_change4"
+    :ok = Server.insert_key(key, "uptime", %{"max_time" => 0.1})
+    :ok = Server.put(key, true)
+    assert Server.get(key) == true
+    100 |> :timer.sleep
+    assert Server.get(key) == false
+    :ok = Server.update_key(key, "uptime", %{"max_time" => 0.2})
+    :ok = Server.put(key, true)
+    assert Server.get(key) == true
+    100 |> :timer.sleep
+    assert Server.get(key) == true
+    100 |> :timer.sleep
+    assert Server.get(key) == false
+  end
   # TODO test for same_value_resultion and min_resolution, we need to have access to number of stored data points for that
 
   defp has_key?(name) do

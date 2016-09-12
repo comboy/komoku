@@ -6,15 +6,15 @@ defmodule Komoku.KeyHandler do
 
   use GenServer
 
-  def start_link(name, opts), do: GenServer.start_link(__MODULE__, opts |> Map.put(:name, name))
+  def start_link(name, params), do: GenServer.start_link(__MODULE__, params |> Map.put(:name, name))
   # get the last stored value and time tuple
   def last(pid), do: GenServer.call pid, :last
   # get the last stored value
   def get(pid), do: GenServer.call pid, :get
+  # update key opts
+  def update_opts(pid, opts), do: GenServer.call pid, {:update_opts, opts}
   # get the last stored value
   def put(pid, value, time), do: GenServer.call pid, {:put, value, time}
-
-  # FIXME I think HK won't receive info about updated opts, it should handle updating opts itself maybe
 
   # Implementation
   def init(key) do
@@ -69,6 +69,10 @@ defmodule Komoku.KeyHandler do
   def handle_call({:put, value, time}, _from, key) do
     {ret, key} = put_value(value, time, key)
     {:reply, ret, key}
+  end
+
+  def handle_call({:update_opts, opts}, _from, key) do
+    {:reply, :ok, key |> Map.put(:opts, (key[:opts] || %{}) |> Map.merge(opts))}
   end
 
   # last value cached

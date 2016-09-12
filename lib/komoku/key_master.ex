@@ -1,6 +1,7 @@
 defmodule Komoku.KeyMaster do
 
   alias Komoku.Storage
+  alias Komoku.KeyHandler
 
   use GenServer
 
@@ -53,6 +54,16 @@ defmodule Komoku.KeyMaster do
         handle_call({:insert, name, type, opts}, from, keys)
       %{type: ^type} = key ->
         # Type is fine, we just need to update the opts
+
+        # Let KeyHandler know about the change
+        :ok = case handler_pid(name) do
+          :undefined ->
+            :ok
+          pid ->
+            pid |> KeyHandler.update_opts(opts)
+        end
+
+        # Update Storage
         # TODO opts validation, not sure if it belongs in Schema.Key changeset or somewhere in KM
         # TODO remove opts that match defaults not to store them in db
         case Storage.update_key_opts(key.id, key.opts |> Map.merge(opts)) do
