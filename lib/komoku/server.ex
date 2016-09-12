@@ -10,6 +10,8 @@ defmodule Komoku.Server do
 
   alias Komoku.KeyMaster
   alias Komoku.KeyHandler
+  alias Komoku.SubscriptionManager
+
   alias Komoku.Util
 
   def start_link do
@@ -93,6 +95,9 @@ defmodule Komoku.Server do
     op_count(:last)
     get_last(name)
   end
+
+  def subscribe(key), do: SubscriptionManager.subscribe(key)
+  def unsubscribe(key), do: SubscriptionManager.unsubscribe(key)
 
   defp guess_type(value) when is_number(value), do: "numeric"
   defp guess_type(value) when is_boolean(value), do: "boolean"

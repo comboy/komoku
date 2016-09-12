@@ -81,9 +81,6 @@ defmodule Komoku.KeyMaster do
           :undefined -> :ok
           _pid -> Komoku.KeyMaster.Supervisor.stop_kh(name)
         end
-        # * remove subscriptions
-        # PONDER: key is removed then key with the same name is added, perhaps processes that subscribed to this name changes still want to hear about them
-        # Komoku.SubscriptionManager.unsubscribe_all(name)
         :ok = Storage.delete_key(id)
         {:reply, :ok, keys |> Map.delete(name)}
     end

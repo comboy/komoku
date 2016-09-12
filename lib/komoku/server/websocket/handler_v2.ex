@@ -6,6 +6,7 @@ defmodule Komoku.Server.Websocket.HandlerV2 do
   require Logger
 
   alias Komoku.Stats
+  alias Komoku.Server
 
   def init({_tcp, _http}, _req, _opts) do
     {:upgrade, :protocol, :cowboy_websocket}
@@ -43,15 +44,15 @@ defmodule Komoku.Server.Websocket.HandlerV2 do
   end
 
   def handle_query(%{"get" => %{"key" => key}}) do
-    {:ok, Komoku.Server.get(key)}
+    {:ok, Server.get(key)}
   end
 
   def handle_query(%{"put" => %{"key" => key, "value" => value} = data}) do
-    Komoku.Server.put(key, value, data["time"] || Komoku.Util.ts)
+    Server.put(key, value, data["time"] || Komoku.Util.ts)
   end
 
   def handle_query(%{"last" => %{"key" => key}}) do
-    result = case Komoku.Server.last(key) do
+    result = case Server.last(key) do
       {value, time} -> %{value: value, time: time}
       nil -> nil
     end
@@ -60,22 +61,22 @@ defmodule Komoku.Server.Websocket.HandlerV2 do
 
 
   def handle_query(%{"keys" => _opts}) do
-    {:ok, Komoku.Server.list_keys}
+    {:ok, Server.list_keys}
   end
 
   def handle_query(%{"sub" => %{"key" => key}}) do
-    Komoku.SubscriptionManager.subscribe(key)
+    Server.subscribe(key)
   end
 
   def handle_query(%{"unsub" => %{"key" => key}}) do
-    Komoku.SubscriptionManager.unsubscribe(key)
+    Server.unsubscribe(key)
   end
 
   def handle_query(%{"define" => defs}) do
     defs |> Enum.reduce(:ok, fn({name, params}, status) ->
       case params do
         %{"type" => type} ->
-          case Komoku.Server.update_key(name, type, params["opts"] || %{}) do
+          case Server.update_key(name, type, params["opts"] || %{}) do
             :ok -> status
             _   -> {:error, :error_creating_key}
           end

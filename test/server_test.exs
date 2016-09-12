@@ -152,6 +152,14 @@ defmodule Komoku.ServerTest do
     assert Server.get("str_put") == "boo!"
   end
 
+  # Subscription (most tsets in SubscriptionManager)
+
+  test "subscribe to non-existent key" do
+    :ok = Server.subscribe("sub_nonkey")
+    :ok = Server.put("sub_nonkey", 123)
+    assert_receive {:key_update, %{key: "sub_nonkey", time: _time, value: 123}}
+  end
+
   # Uptime
 
   test "uptime key changes to false" do

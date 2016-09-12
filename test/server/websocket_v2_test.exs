@@ -57,6 +57,29 @@ defmodule Komoku.Server.WebsocketV2Test do
     %{"pub" => %{"key" => "w2s_key_sub", "value" => 234, "previous" => 123}} = recv(c[:socket]) 
   end
 
+  test "subscribe to non-existent key", c do
+    key = "w2s_key_sub_none"
+    c[:socket] |> push(%{sub: %{key: key}})
+    :ok = Server.insert_key(key, "numeric")
+    assert recv(c[:socket]) == %{"result" => "ok"}
+    :ok = Server.put(key, 123)
+    %{"pub" => %{"key" => ^key, "value" => 123}} = recv(c[:socket]) 
+    :ok = Server.put(key, 234)
+    %{"pub" => %{"key" => ^key, "value" => 234, "previous" => 123}} = recv(c[:socket]) 
+  end
+
+  test "subscribe to key which gets deleted", c do
+    key = "w2s_key_sub_none2"
+    c[:socket] |> push(%{sub: %{key: key}})
+    assert recv(c[:socket]) == %{"result" => "ok"}
+    :ok = Server.insert_key(key, "numeric")
+    :ok = Server.delete_key(key)
+    :ok = Server.put(key, "foo")
+    %{"pub" => %{"key" => ^key, "value" => "foo"}} = recv(c[:socket]) 
+    :ok = Server.put(key, "bar")
+    %{"pub" => %{"key" => ^key, "value" => "bar", "previous" => "foo"}} = recv(c[:socket]) 
+  end
+
   test "unsubscribe from key change", c do
     :ok = Server.insert_key("w2s_key_sub2", "numeric")
     c[:socket] |> push(%{sub: %{key: "w2s_key_sub2"}})
