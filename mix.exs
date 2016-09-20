@@ -30,7 +30,8 @@ defmodule Komoku.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [{:ecto, "~> 2.0"}, # database ORM
-     {:socket, "~> 0.3.5"},#, only: :test}, # testing websocket server, but also perf test
+     {:socket, "~> 0.3.5", only: [:test, :dev]}, # testing websocket server, but also perf test
+     {:benchfella, "~> 0.3.0", only: [:test, :dev]}, # testing websocket server, but also perf test
      {:cowboy, "~> 1.0", optional: true}, # websocket server
      {:poison, "~> 2.0"}, # JSON
      {:gproc, "~> 0.6.1"}, # process registry

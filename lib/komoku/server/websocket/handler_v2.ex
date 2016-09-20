@@ -43,6 +43,10 @@ defmodule Komoku.Server.Websocket.HandlerV2 do
     {:reply, {:text, %{pub: change} |> Poison.encode!}, req, state}
   end
 
+  def handle_query(%{"ping" => uniq}) do
+    {:ok, %{"pong" => uniq}}
+  end
+
   def handle_query(%{"get" => %{"key" => key}}) do
     {:ok, Server.get(key)}
   end

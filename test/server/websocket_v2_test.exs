@@ -100,6 +100,11 @@ defmodule Komoku.Server.WebsocketV2Test do
     assert recv(c[:socket]) == %{"result" => "ok", "query_id" => "bzium"}
   end
 
+  test "ping", c do
+    c[:socket] |> push(%{ping: "foo"})
+    assert recv(c[:socket]) == %{"result" => %{"pong" => "foo"}}
+  end
+
   defp push(socket, data) do
     socket |> Socket.Web.send!({:text, data |> Poison.encode!})
   end
