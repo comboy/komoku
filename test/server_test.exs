@@ -205,6 +205,24 @@ defmodule Komoku.ServerTest do
     100 |> :timer.sleep
     assert Server.get(key) == false
   end
+
+  test "incorrect value type" do
+    key = "incorrect_value_bool"
+    :ok = Server.insert_key(key, "boolean")
+    {:error, :invalid_value} = Server.put(key, 123)
+    {:error, :invalid_value} = Server.put(key, "moo")
+    :ok = Server.put(key, "true")
+    :ok = Server.put(key, "false")
+    :ok = Server.put(key, true)
+
+    key = "incorrect_value_numeric"
+    :ok = Server.insert_key(key, "numeric")
+    {:error, :invalid_value} = Server.put(key, "mooo")
+    {:error, :invalid_value} = Server.put(key, true)
+    :ok = Server.put(key, "123")
+    :ok = Server.put(key, "-32.123")
+    :ok = Server.put(key, 123)
+  end
   # TODO test for same_value_resultion and min_resolution, we need to have access to number of stored data points for that
 
   defp has_key?(name) do

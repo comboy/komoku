@@ -67,8 +67,13 @@ defmodule Komoku.KeyHandler do
   end
 
   def handle_call({:put, value, time}, _from, key) do
-    {ret, key} = put_value(value, time, key)
-    {:reply, ret, key}
+    case value |> validate(key) do
+      :ok ->
+        {ret, key} = put_value(value, time, key)
+        {:reply, ret, key}
+      {:error, error} ->
+        {:reply, {:error, error}, key}
+    end
   end
 
   def handle_call({:update_opts, opts}, _from, key) do
@@ -94,13 +99,15 @@ defmodule Komoku.KeyHandler do
 
   defp put_value(value, time, key) do
     value = value |> cast(key)
+
+    # Notification
     {{pvalue, ptime}, key} = case key |> get_last do
       {nil, key} -> {{nil, nil}, key}
       ok -> ok
     end
-
     Komoku.SubscriptionManager.publish(%{key: key[:name], value: value, previous: pvalue, time: time})
 
+    # Storage
     ret = cond do
       key.opts[:same_value_resolution] && ptime && pvalue == value && (time - ptime) < key.opts[:same_value_resolution] ->
         :ok
@@ -144,5 +151,28 @@ defmodule Komoku.KeyHandler do
   defp cast("true", %{type: "boolean"}), do: true
   defp cast("false", %{type: "boolean"}), do: false
   defp cast(value, _key), do: value
+
+  defp validate(value, %{type: type} = _key) do
+    # TODO add validation based on key opts e.g. max_value min_value or string length
+    case validate_type(value, type) do
+      :ok -> :ok
+      :fail -> {:error, :invalid_value}
+    end
+  end
+
+  defp validate_type(value, "boolean") do
+    case value do
+      true    -> :ok
+      false   -> :ok
+      "true"  -> :ok
+      "false" -> :ok
+      _       -> :fail
+    end
+  end
+  defp validate_type(value, "numeric") when is_number(value), do: :ok
+  defp validate_type(value, "numeric") when is_binary(value), do: Regex.match?(~r/^-?(\d+\.)?\d+$/, value) && :ok || :fail
+  defp validate_type(value, "numeric"), do: :fail
+
+  defp validate_type(_value, _type), do: :ok
 
 end

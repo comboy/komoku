@@ -63,7 +63,7 @@ def start_link do
 
   def put(%{id: id, type: type} = _key, value, time) do
     params = %{value: value, key_id: id, time: time |> Util.ts_to_ecto}
-    data_changeset(type, params) |> Repo.insert #TODO, again, errors abstraction
+    data_changeset(type, params) |> Repo.insert |> wrap_ecto_errors
   end
 
   # Get last value for given key. Returns tuple {value, time} or nil
@@ -89,6 +89,22 @@ def start_link do
   defp data_changeset("boolean", params), do: DataBoolean.changeset(%DataBoolean{}, params)
   defp data_changeset("uptime", params),  do: DataBoolean.changeset(%DataBoolean{}, params)
   defp data_changeset("string", params),  do: DataString.changeset(%DataString{}, params)
+
+  defp wrap_ecto_errors(result) do
+    case result do
+      {:ok, key} -> 
+        {:ok, key}
+      {:error, %{errors: errors} = changeset} ->
+        {:error,
+          cond do
+            errors[:value] && (errors[:value] |> elem(0)) == "is invalid" ->
+              :invalid_value
+            true ->
+              changeset # uknown error
+          end
+        }
+    end
+  end
  
 end
 
