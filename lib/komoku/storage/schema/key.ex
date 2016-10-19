@@ -29,7 +29,7 @@ defmodule Komoku.Storage.Schema.Key do
   defp validate_key_type(changeset) do
     type = changeset |> get_field(:type)
     # TODO move list to a common place
-    unless ["numeric", "boolean", "string", "uptime"] |> Enum.member?(type) do
+    unless ["numeric", "boolean", "string", "uptime", "counter"] |> Enum.member?(type) do
       changeset |> add_error(:type, "invalid key type")
     else
       changeset

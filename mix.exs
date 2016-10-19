@@ -32,7 +32,7 @@ defmodule Komoku.Mixfile do
     [{:ecto, "~> 2.0"}, # database ORM
      {:socket, "~> 0.3.5", only: [:test, :dev]}, # testing websocket server, but also perf test
      {:benchfella, "~> 0.3.0", only: [:test, :dev]}, # testing websocket server, but also perf test
-     {:cowboy, "~> 1.0", optional: true}, # websocket server
+     {:cowboy, "~> 1.0"}, # websocket server
      {:poison, "~> 2.0"}, # JSON
      {:gproc, "~> 0.6.1"}, # process registry
      {:postgrex, "0.11.2"}] # database driver

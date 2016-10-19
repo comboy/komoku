@@ -40,6 +40,7 @@ defmodule Komoku.Server.Websocket.HandlerV2 do
 
   # updates for subscribed keys
   def websocket_info({:key_update, change}, req, state) do
+    # {pub: {key:, value:, previous:, time:}}
     {:reply, {:text, %{pub: change} |> Poison.encode!}, req, state}
   end
 

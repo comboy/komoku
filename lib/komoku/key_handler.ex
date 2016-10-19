@@ -15,6 +15,11 @@ defmodule Komoku.KeyHandler do
   def update_opts(pid, opts), do: GenServer.call pid, {:update_opts, opts}
   # get the last stored value
   def put(pid, value, time), do: GenServer.call pid, {:put, value, time}
+  # increment value
+  def increment(pid, step, time), do: GenServer.call pid, {:increment, step, time}
+  # decrement value
+  def decrement(pid, step, time), do: GenServer.call pid, {:decrement, step, time}
+
 
   # Implementation
   def init(key) do
@@ -74,6 +79,28 @@ defmodule Komoku.KeyHandler do
       {:error, error} ->
         {:reply, {:error, error}, key}
     end
+  end
+
+  def handle_call({:increment, step, time}, _from, key) do
+    # TODO validate if step is a number, may need to cast
+    # TODO generate some friendly error if key type is not numeric
+    {{value, _time}, key} = case key |> get_last do
+      {nil, key} -> {{0, nil}, key}
+      ok -> ok
+    end
+    {ret, key} = put_value(value + step, time, key)
+    {:reply, ret, key}
+  end
+
+  def handle_call({:decrement, step, time}, _from, key) do
+    # TODO validate if step is a number, may need to cast
+    # TODO generate some friendly error if key type is not numeric
+    {{value, _time}, key} = case key |> get_last do
+      {nil, key} -> {{0, nil}, key}
+      ok -> ok
+    end
+    {ret, key} = put_value(value - step, time, key)
+    {:reply, ret, key}
   end
 
   def handle_call({:update_opts, opts}, _from, key) do
@@ -171,7 +198,7 @@ defmodule Komoku.KeyHandler do
   end
   defp validate_type(value, "numeric") when is_number(value), do: :ok
   defp validate_type(value, "numeric") when is_binary(value), do: Regex.match?(~r/^-?(\d+\.)?\d+$/, value) && :ok || :fail
-  defp validate_type(value, "numeric"), do: :fail
+  defp validate_type(_value, "numeric"), do: :fail
 
   defp validate_type(_value, _type), do: :ok
 

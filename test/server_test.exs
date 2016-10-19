@@ -206,6 +206,46 @@ defmodule Komoku.ServerTest do
     assert Server.get(key) == false
   end
 
+  # Counter
+
+  test "counter simple put" do
+    key = "counter1"
+    :ok = Server.insert_key(key, "counter")
+    :ok = Server.put(key, 123)
+    assert Server.get(key) == 123
+  end
+
+  test "counter" do
+    key = "counter2"
+    :ok = Server.insert_key(key, "counter")
+    :ok = Server.increment(key)
+    assert Server.get(key) == 1
+    :ok = Server.increment(key)
+    :ok = Server.increment(key)
+    assert Server.get(key) == 3
+    :ok = Server.decrement(key)
+    assert Server.get(key) == 2
+  end
+
+  test "counter by step" do
+    key = "counter3"
+    :ok = Server.insert_key(key, "counter")
+    :ok = Server.increment(key, 3.6)
+    assert Server.get(key) == 3.6
+    :ok = Server.increment(key, 1.1)
+    assert Server.get(key) == 4.7
+    :ok = Server.decrement(key, 1)
+    assert Server.get(key) == 3.7
+  end
+
+  # TODO incr and decr with time param
+
+  # Error handling
+
+  test "incorrect key type" do
+    assert Server.insert_key("invalid_type1", "foobar") == {:error, :invalid_type}
+  end
+
   test "incorrect value type" do
     key = "incorrect_value_bool"
     :ok = Server.insert_key(key, "boolean")

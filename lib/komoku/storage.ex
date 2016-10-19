@@ -34,12 +34,16 @@ def start_link do
   end
 
   def create_key(%{type: type, name: name, opts: opts}) do
-    changeset = Key.changeset(%Key{}, %{name: name |> to_string, type: type, opts: opts})
-    # TODO abstact error messages away from ecto. We probably want
-    # * {:error, :invalid_key_name}
-    # * {:error, :already_exists}
-    # * {:error, :invalid opts} later?
-    Repo.insert(changeset)
+    case data_type(type) do
+      :invalid -> {:error, :invalid_type}
+      _ ->
+        changeset = Key.changeset(%Key{}, %{name: name |> to_string, type: type, opts: opts})
+        # TODO abstact error messages away from ecto. We probably want
+        # * {:error, :invalid_key_name}
+        # * {:error, :already_exists}
+        # * {:error, :invalid opts} later?
+        Repo.insert(changeset)
+    end
   end
 
   def update_key_opts(id, opts) do
@@ -81,11 +85,14 @@ def start_link do
   end
 
   defp data_type("numeric"), do: DataNumeric
+  defp data_type("counter"), do: DataNumeric
   defp data_type("boolean"), do: DataBoolean
   defp data_type("uptime"),  do: DataBoolean
   defp data_type("string"),  do: DataString
+  defp data_type(_), do: :invalid
 
   defp data_changeset("numeric", params), do: DataNumeric.changeset(%DataNumeric{}, params)
+  defp data_changeset("counter", params), do: DataNumeric.changeset(%DataNumeric{}, params)
   defp data_changeset("boolean", params), do: DataBoolean.changeset(%DataBoolean{}, params)
   defp data_changeset("uptime", params),  do: DataBoolean.changeset(%DataBoolean{}, params)
   defp data_changeset("string", params),  do: DataString.changeset(%DataString{}, params)

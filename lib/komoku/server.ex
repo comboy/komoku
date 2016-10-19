@@ -99,6 +99,22 @@ defmodule Komoku.Server do
   def subscribe(key), do: SubscriptionManager.subscribe(key)
   def unsubscribe(key), do: SubscriptionManager.unsubscribe(key)
 
+  def increment(name, step \\ 1, time \\ Komoku.Util.ts) do
+    op_count(:increment)
+    case KeyMaster.handler(name) do
+      nil -> {:error, :invalid_key}
+      pid ->  KeyHandler.increment(pid, step, time)
+    end
+  end
+ 
+  def decrement(name, step \\ 1, time \\ Komoku.Util.ts) do
+    op_count(:decrement)
+    case KeyMaster.handler(name) do
+      nil -> {:error, :invalid_key}
+      pid ->  KeyHandler.decrement(pid, step, time)
+    end
+  end
+
   defp guess_type(value) when is_number(value), do: "numeric"
   defp guess_type(value) when is_boolean(value), do: "boolean"
   defp guess_type("true"), do: "boolean"
