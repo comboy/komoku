@@ -69,13 +69,18 @@ defmodule Komoku.Server.Websocket.HandlerV2 do
     {:ok, Server.list_keys}
   end
 
-  def handle_query(%{"sub" => %{"key" => key}}) do
+  def handle_query(%{"sub" => %{"key" => key}}), do:
     Server.subscribe(key)
   end
 
   def handle_query(%{"unsub" => %{"key" => key}}) do
     Server.unsubscribe(key)
   end
+
+  def handle_query(%{"increment" => %{"key" => key, "step" => step}}), do: Server.increment(key, step)
+  def handle_query(%{"increment" => %{"key" => key}}),                 do: Server.increment(key)
+  def handle_query(%{"decrement" => %{"key" => key, "step" => step}}), do: Server.decrement(key, step)
+  def handle_query(%{"decrement" => %{"key" => key}}),                 do: Server.decrement(key)
 
   def handle_query(%{"define" => defs}) do
     defs |> Enum.reduce(:ok, fn({name, params}, status) ->

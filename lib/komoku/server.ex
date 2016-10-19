@@ -1,5 +1,5 @@
 defmodule Komoku.Server do
-  # TODO 
+  # TODO
   # Point of access to the values
   # Manages genservers for specific values, also starts engine (eg database workers pool)
   # Represents public API
@@ -106,7 +106,7 @@ defmodule Komoku.Server do
       pid ->  KeyHandler.increment(pid, step, time)
     end
   end
- 
+
   def decrement(name, step \\ 1, time \\ Komoku.Util.ts) do
     op_count(:decrement)
     case KeyMaster.handler(name) do
@@ -132,5 +132,5 @@ defmodule Komoku.Server do
       pid ->  KeyHandler.last(pid)
     end
   end
- 
+
 end

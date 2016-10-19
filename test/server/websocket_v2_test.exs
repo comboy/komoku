@@ -90,6 +90,23 @@ defmodule Komoku.Server.WebsocketV2Test do
     assert recv(c[:socket]) == %{"result" => "ok"} # if subscription was stil lon first received msg would be a notification
   end
 
+  test "increment and decrement", c do
+    key = "w2s_key_counter"
+    :ok = Server.insert_key(key, "counter")
+    c[:socket] |> push(%{increment: %{key: key}})
+    assert recv(c[:socket]) == %{"result" => "ok"}
+    c[:socket] |> push(%{get: %{key: key}})
+    assert recv(c[:socket]) == %{"result" => 1}
+    c[:socket] |> push(%{increment: %{key: key, step: 2.4}})
+    assert recv(c[:socket]) == %{"result" => "ok"}
+    c[:socket] |> push(%{decrement: %{key: key}})
+    assert recv(c[:socket]) == %{"result" => "ok"}
+    c[:socket] |> push(%{decrement: %{key: key, step: 1.2}})
+    assert recv(c[:socket]) == %{"result" => "ok"}
+    c[:socket] |> push(%{get: %{key: key}})
+    assert recv(c[:socket]) == %{"result" => 1.2}
+  end
+
   test "invalid query", c do
     c[:socket] |> push(%{some_invalid: "query"})
     assert recv(c[:socket]) == %{"error" => "invalid_query"}
