@@ -19,6 +19,8 @@ defmodule Komoku.KeyHandler do
   def increment(pid, step, time), do: GenServer.call pid, {:increment, step, time}
   # decrement value
   def decrement(pid, step, time), do: GenServer.call pid, {:decrement, step, time}
+  # fetch multiple values
+  def fetch(pid, opts), do: GenServer.call pid, {:fetch, opts} # TODO ponder timeout
 
 
   # Implementation
@@ -105,6 +107,12 @@ defmodule Komoku.KeyHandler do
 
   def handle_call({:update_opts, opts}, _from, key) do
     {:reply, :ok, key |> Map.put(:opts, (key[:opts] || %{}) |> Map.merge(opts))}
+  end
+
+  def handle_call({:fetch, opts}, _from, key) do
+    # TODO we probably want to make this call async because it can take a long time
+    # TODO when puts are async we should wait for queue to finish before providing the result
+    {:reply, Storage.fetch(key, opts), key}
   end
 
   # last value cached

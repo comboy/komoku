@@ -69,7 +69,7 @@ defmodule Komoku.Server.Websocket.HandlerV2 do
     {:ok, Server.list_keys}
   end
 
-  def handle_query(%{"sub" => %{"key" => key}}), do:
+  def handle_query(%{"sub" => %{"key" => key}}) do
     Server.subscribe(key)
   end
 

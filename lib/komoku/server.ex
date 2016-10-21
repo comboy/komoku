@@ -96,6 +96,16 @@ defmodule Komoku.Server do
     get_last(name)
   end
 
+  # Fetch multiple values. See Storage.fetch
+  # Returns a list in of {time, value} tuples
+  def fetch(name, opts) do
+    op_count(:fetch)
+    case KeyMaster.handler(name) do
+      nil -> [] 
+      pid ->  KeyHandler.fetch(pid, opts)
+    end
+  end
+
   def subscribe(key), do: SubscriptionManager.subscribe(key)
   def unsubscribe(key), do: SubscriptionManager.unsubscribe(key)
 

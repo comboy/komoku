@@ -58,8 +58,8 @@ def start_link do
   end
 
   def list_keys do
-    Key 
-      |> Repo.all 
+    Key
+      |> Repo.all
       |> Enum.map(fn %Key{type: type, name: name, id: id, opts: opts} ->
         %{type: type, id: id, opts: opts, name: name}
       end)
@@ -71,17 +71,31 @@ def start_link do
   end
 
   # Get last value for given key. Returns tuple {value, time} or nil
+  # TODO since fetch returns {time, value} tuples it may be better to return the same kind of tuple here for consistency, ie reverse the order
   def last(%{id: id, type: type} = _key) do
     import Ecto.Query
     query = from p in data_type(type),
-      where: p.key_id == ^id, 
+      where: p.key_id == ^id,
       order_by: [desc: p.time],
-      order_by: [desc: p.id],
+      order_by: [desc: p.id], # ensures storage order even if time would be the same for two records
       limit: 1
     case query |> Repo.one do
       nil -> nil
       data -> {data.value, data.time |> Util.ecto_to_ts}
     end
+  end
+
+  # TODO better name
+  def fetch(%{id: id, type: type} = _key, %{"last" => n} = _opts) do
+    import Ecto.Query
+    (from p in data_type(type),
+      where: p.key_id == ^id,
+      order_by: [desc: p.time],
+      order_by: [desc: p.id],
+      limit: ^n)
+    |> Repo.all |> Enum.map(fn x ->
+      {x.time |> Util.ecto_to_ts, x.value}
+    end)
   end
 
   defp data_type("numeric"), do: DataNumeric
@@ -99,7 +113,7 @@ def start_link do
 
   defp wrap_ecto_errors(result) do
     case result do
-      {:ok, key} -> 
+      {:ok, key} ->
         {:ok, key}
       {:error, %{errors: errors} = changeset} ->
         {:error,
@@ -112,6 +126,6 @@ def start_link do
         }
     end
   end
- 
+
 end
 

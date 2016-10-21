@@ -238,6 +238,27 @@ defmodule Komoku.ServerTest do
     assert Server.get(key) == 3.7
   end
 
+  # Fetch
+
+  test "fetch last N values" do
+    key = "fetch1"
+    :ok = Server.insert_key(key, "numeric", %{same_value_resolution: 0, min_resolution: 0})
+    ts = :os.system_time(:micro_seconds) / 1_000_000
+    :ok = Server.put(key, 1)
+    :ok = Server.put(key, 2)
+    :ok = Server.put(key, 3)
+    :ok = Server.put(key, 4)
+    [{t4, v4}, {t3, v3}, {t2, v2}] = Server.fetch(key, %{"last" => 3})
+    assert v4 == 4
+    assert v3 == 3
+    assert v2 == 2
+    [t4, t3, t2] |> Enum.each(fn t -> assert_in_delta(t, ts, 0.1) end)
+  end
+
+  test "fetch nonexisting key" do
+    assert Server.fetch("nosuchkey", %{"last" => 10}) == []
+  end
+
   # TODO incr and decr with time param
 
   # Error handling
