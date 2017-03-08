@@ -44,8 +44,10 @@ defmodule Komoku.Server.Websocket.HandlerV1 do
   def handle_query(%{"get" => %{"key" => key}}), do: Komoku.Server.get(key)
 
   def handle_query(%{"put" => %{"key" => key, "value" => value} = data}) do
-    :ok = Komoku.Server.put(key, value, data["time"] || Komoku.Util.ts)
-    :ack
+    case Komoku.Server.put(key, value, data["time"] || Komoku.Util.ts) do
+      :ok -> :ack
+      {:error, error}  -> %{error: error}
+    end
   end
 
   def handle_query(%{"last" => %{"key" => key}}) do

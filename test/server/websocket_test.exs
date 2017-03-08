@@ -74,6 +74,12 @@ defmodule Komoku.Server.WebsocketTest do
     assert recv(socket) == 1 
   end
 
+  test "put incorrect value", c do
+    c[:socket] |> push(%{put: %{key: "w2s2_incorrect", value: 7}})
+    assert recv(c[:socket]) == "ack"
+    c[:socket] |> push(%{put: %{key: "w2s2_incorrect", value: "foo"}})
+    assert recv(c[:socket]) == %{"error" => "invalid_value"}
+  end
 
   defp push(socket, data) do
     socket |> Socket.Web.send!({:text, data |> Poison.encode!})
